@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "Wupex Store",
+    "slug": "wupex-store",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0d0b1e"
+    },
+    "backgroundColor": "#0d0b1e",
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0d0b1e"
+      },
+      "package": "com.wupex.store",
+      "versionCode": 1,
+      "compileSdkVersion": 34,
+      "targetSdkVersion": 34,
+      "minSdkVersion": 21,
+      "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"]
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.wupex.store"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": ["expo-splash-screen"]
+  }
+}
