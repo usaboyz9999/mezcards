@@ -10,7 +10,6 @@
     "android": {
       "package": "com.wupex.store",
       "versionCode": 1,
-      "minSdkVersion": 24,
       "adaptiveIcon": {
         "backgroundColor": "#0d0b1e"
       }
