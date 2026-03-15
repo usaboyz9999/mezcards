@@ -7,27 +7,26 @@ on:
 
 jobs:
   build:
+    name: Build Android APK
     runs-on: ubuntu-latest
-    steps:
 
-      - name: Checkout code
+    steps:
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 18
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
-          cache: npm
-          cache-dependency-path: wupex-expo/package.json
+          node-version: 20
 
-      - name: Setup EAS
+      - name: Setup Expo and EAS
         uses: expo/expo-github-action@v8
         with:
           expo-version: latest
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Install packages
+      - name: Install dependencies
         working-directory: wupex-expo
         run: npm install
 
@@ -35,9 +34,9 @@ jobs:
         working-directory: wupex-expo
         run: eas build --platform android --profile preview --non-interactive
 
-      - name: Download APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: wupex-apk
-          path: "*.apk"
+          path: wupex-expo/*.apk
           retention-days: 30
