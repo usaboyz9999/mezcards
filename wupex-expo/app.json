@@ -1,12 +1,12 @@
 {
   "expo": {
     "name": "Wupex Store",
-    "slug": "wupex-store",
+    "slug": "mezcards",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0d0b1e",
-    "owner": "usaboyz9999",
+    "owner": "heyeb19085",
     "android": {
       "package": "com.wupex.store",
       "versionCode": 1,
