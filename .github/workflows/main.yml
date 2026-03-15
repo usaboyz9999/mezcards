@@ -19,9 +19,6 @@ jobs:
         with:
           node-version: 20
 
-      - name: Enable Corepack
-        run: corepack enable
-
       - name: Setup Expo and EAS
         uses: expo/expo-github-action@v8
         with:
