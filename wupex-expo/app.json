@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Wupex Store",
+    "name": "Mez-Cards",
     "slug": "mezcards",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0d0b1e",
@@ -12,8 +12,8 @@
       "resizeMode": "contain"
     },
     "android": {
-      "package": "com.wupex.store",
-      "versionCode": 1,
+      "package": "com.mezcards.store",
+      "versionCode": 2,
       "backgroundColor": "#0d0b1e",
       "adaptiveIcon": {
         "backgroundColor": "#0d0b1e"
