@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context/AppContext'
 
 function StarRating({ rating, size = 16, interactive = false, onSelect }) {
   return (
@@ -22,7 +22,7 @@ function StarRating({ rating, size = 16, interactive = false, onSelect }) {
 
 export default function ProductDetailScreen({ route, navigation }) {
   const { product } = route.params;
-  const { addToCart, t, isRTL, currentUser, colors: C, toggleWishlist, isInWishlist, getProductReviews, getProductRating, addReview, markHelpful } = useApp();
+  const { addToCart, checkout, cart, clearCart, t, isRTL, currentUser, colors: C, toggleWishlist, isInWishlist, getProductReviews, getProductRating, addReview, markHelpful } = useApp();
 
   const [selectedPkg, setSelectedPkg] = useState(0);
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -47,6 +47,18 @@ export default function ProductDetailScreen({ route, navigation }) {
       { text: t('continueShopping'), style: 'cancel' },
       { text: t('viewCart'), onPress: () => navigation.navigate('Cart') },
     ]);
+  };
+
+  const handleBuyNow = () => {
+    if (!currentUser) {
+      Alert.alert(t('signInRequired'), t('signInToPurchase'), [
+        { text: t('cancel'), style: 'cancel' },
+        { text: t('signIn'), onPress: () => navigation.navigate('Account') },
+      ]);
+      return;
+    }
+    addToCart(product, selectedPkg);
+    navigation.navigate('Cart');
   };
 
   const handleWishlist = () => {
@@ -130,19 +142,31 @@ export default function ProductDetailScreen({ route, navigation }) {
         </View>
       </View>
 
-      {/* Add to Cart */}
-      <TouchableOpacity onPress={handleAdd} activeOpacity={0.88}>
-        <LinearGradient
-          colors={currentUser ? [C.primary, C.primary2] : ['#3a2f5a', '#4a3f6a']}
-          style={styles.addBtn}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-        >
-          <Ionicons name={currentUser ? 'cart' : 'lock-closed'} size={18} color="#fff" />
-          <Text style={styles.addBtnText}>
-            {currentUser ? `${t('addToCart')} — $${product.pkgs[selectedPkg].p.toFixed(2)}` : `🔒 ${t('signIn')}`}
-          </Text>
-        </LinearGradient>
-      </TouchableOpacity>
+      {/* أزرار الشراء */}
+      <View style={[styles.btnsRow, isRTL && { flexDirection: 'row-reverse' }]}>
+        {/* اشترِ الآن */}
+        <TouchableOpacity onPress={handleBuyNow} activeOpacity={0.88} style={{ flex: 1 }}>
+          <LinearGradient
+            colors={currentUser ? ['#f97316', '#ef4444'] : ['#3a2f5a', '#4a3f6a']}
+            style={styles.buyNowBtn}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+          >
+            <Ionicons name={currentUser ? 'flash' : 'lock-closed'} size={17} color="#fff" />
+            <Text style={styles.buyNowBtnText}>{t('buyNow')}</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+        {/* أضف للسلة */}
+        <TouchableOpacity onPress={handleAdd} activeOpacity={0.88} style={{ flex: 1 }}>
+          <LinearGradient
+            colors={currentUser ? [C.primary, C.primary2] : ['#3a2f5a', '#4a3f6a']}
+            style={styles.addBtn}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+          >
+            <Ionicons name={currentUser ? 'cart' : 'lock-closed'} size={17} color="#fff" />
+            <Text style={styles.addBtnText}>{currentUser ? t('addToCart') : `🔒 ${t('signIn')}`}</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
 
       {/* ─ Reviews Section ─ */}
       <View style={[styles.reviewsSection, { backgroundColor: C.bg2, borderColor: C.border }]}>
@@ -284,8 +308,11 @@ const styles = StyleSheet.create({
   pkgAmount: { fontSize: 14, fontWeight: '900', marginBottom: 3 },
   pkgPrice: { fontSize: 14, fontWeight: '700' },
   pkgRegion: { fontSize: 12, marginTop: 3 },
-  addBtn: { marginHorizontal: 14, borderRadius: 15, padding: 17, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  addBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  btnsRow: { flexDirection: 'row', gap: 10, marginHorizontal: 14, marginBottom: 8 },
+  buyNowBtn: { borderRadius: 15, padding: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  buyNowBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
+  addBtn: { borderRadius: 15, padding: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  addBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
   reviewsSection: { margin: 14, borderRadius: 18, padding: 16, borderWidth: 1 },
   reviewsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   reviewsTitle: { fontSize: 16, fontWeight: '900' },

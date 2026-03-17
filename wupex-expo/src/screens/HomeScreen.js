@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, FlatList, Dimensions, Animated,
+  Image, FlatList, Dimensions, Animated, PanResponder, TextInput, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { PRODUCTS } from '../data';
-import { useApp } from '../context/AppContext';
+import { PRODUCTS } from '../data/index.js';
+import { useApp } from '../context/AppContext'
 
 const { width } = Dimensions.get('window');
 const CARD_W = width * 0.4;
@@ -69,56 +69,147 @@ function MarqueeBanner() {
 // ─── Promo Banners ────────────────────────────────────────────────────────────
 function PromoBanners({ navigation }) {
   const { language, isRTL } = useApp();
+  const GAP = 10;
+  const CARD_WIDTH = width - 28;
+  const STEP = CARD_WIDTH + GAP;
+  const total = PROMO_BANNERS.length;
   const [active, setActive] = useState(0);
-  const ref = useRef(null);
+  const translateX = useRef(new Animated.Value(0)).current;
+  const activeRef = useRef(0);
+  const isAnimating = useRef(false);
+  const isDragging = useRef(false);
+  const wasDragged = useRef(false);
+  const timerRef = useRef(null);
+  const dragStartX = useRef(0);
+  const currentOffsetRef = useRef(0);
+
+  // تحديث القيمة الحالية عند كل تحريك
+  useEffect(() => {
+    const id = translateX.addListener(({ value }) => {
+      currentOffsetRef.current = value;
+    });
+    return () => translateX.removeListener(id);
+  }, []);
+
+  const goTo = (next, animated = true) => {
+    isAnimating.current = true;
+    activeRef.current = next;
+    setActive(next);
+    Animated.timing(translateX, {
+      toValue: -next * STEP,
+      duration: animated ? 500 : 0,
+      useNativeDriver: true,
+    }).start(() => { isAnimating.current = false; });
+  };
+
+  const startAutoPlay = () => {
+    stopAutoPlay();
+    timerRef.current = setInterval(() => {
+      if (isDragging.current) return;
+      const next = isRTL
+        ? (activeRef.current - 1 + total) % total
+        : (activeRef.current + 1) % total;
+      goTo(next);
+    }, 3500);
+  };
+
+  const stopAutoPlay = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
 
   useEffect(() => {
-    const t = setInterval(() => {
-      setActive(prev => {
-        const next = (prev + 1) % PROMO_BANNERS.length;
-        ref.current?.scrollToIndex({ index: next, animated: true });
-        return next;
-      });
-    }, 3500);
-    return () => clearInterval(t);
-  }, []);
+    goTo(0, false);
+  }, [isRTL]);
+
+  useEffect(() => {
+    startAutoPlay();
+    return () => stopAutoPlay();
+  }, [isRTL]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 5,
+
+      onPanResponderGrant: () => {
+        isDragging.current = true;
+        wasDragged.current = false;
+        stopAutoPlay();
+        translateX.stopAnimation();
+        dragStartX.current = currentOffsetRef.current;
+      },
+
+      onPanResponderMove: (_, g) => {
+        if (Math.abs(g.dx) > 5) wasDragged.current = true;
+        translateX.setValue(dragStartX.current + g.dx);
+      },
+
+      onPanResponderRelease: (_, g) => {
+        isDragging.current = false;
+        const threshold = CARD_WIDTH * 0.25;
+        const current = activeRef.current;
+        let next = current;
+
+        if (g.dx < -threshold && current < total - 1) next = current + 1;
+        else if (g.dx > threshold && current > 0) next = current - 1;
+
+        goTo(next);
+        // استئناف التلقائي بعد 3 ثواني من ترك الإصبع
+        setTimeout(() => startAutoPlay(), 3000);
+      },
+
+      onPanResponderTerminate: () => {
+        isDragging.current = false;
+        goTo(activeRef.current);
+        setTimeout(() => startAutoPlay(), 3000);
+      },
+    })
+  ).current;
 
   return (
     <View style={{ marginTop: 14, marginHorizontal: 14 }}>
-      <FlatList
-        ref={ref}
-        data={PROMO_BANNERS}
-        keyExtractor={i => String(i.id)}
-        horizontal pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={e => {
-          setActive(Math.round(e.nativeEvent.contentOffset.x / (width - 28)));
-        }}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={{ width: width - 28 }}
-            onPress={() => navigation.navigate('Products', { filterCategory: item.filter })}
-            activeOpacity={0.92}
-          >
-            <LinearGradient colors={item.colors} style={s.promoBannerGrad}>
-              <View style={[s.promoBannerRow, isRTL && { flexDirection: 'row-reverse' }]}>
-                <View style={{ flex: 1 }}>
-                  <View style={[s.promoBadge, isRTL && { alignSelf: 'flex-end' }]}>
-                    <Text style={s.promoBadgeTxt}>{isRTL ? '🔥 حصري' : '🔥 Exclusive'}</Text>
+      <View style={{ width: CARD_WIDTH, overflow: 'hidden', borderRadius: 16 }}>
+        <Animated.View
+          {...panResponder.panHandlers}
+          style={{
+            flexDirection: 'row',
+            width: STEP * total,
+            transform: [{ translateX }],
+          }}
+        >
+          {PROMO_BANNERS.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={{ width: CARD_WIDTH, marginRight: GAP }}
+              onPress={() => {
+                if (wasDragged.current) return;
+                navigation.navigate('Products', { filterCategory: item.filter });
+              }}
+              activeOpacity={0.92}
+            >
+              <LinearGradient colors={item.colors} style={s.promoBannerGrad}>
+                <View style={[s.promoBannerRow, isRTL && { flexDirection: 'row-reverse' }]}>
+                  <View style={{ flex: 1 }}>
+                    <View style={[s.promoBadge, isRTL && { alignSelf: 'flex-end' }]}>
+                      <Text style={s.promoBadgeTxt}>{isRTL ? '🔥 حصري' : '🔥 Exclusive'}</Text>
+                    </View>
+                    <Text style={[s.promoTitle, isRTL && { textAlign: 'right' }]}>{item.title[language]}</Text>
+                    <Text style={[s.promoSub, isRTL && { textAlign: 'right' }]}>{item.sub[language]}</Text>
+                    <View style={[s.promoBtn, isRTL && { alignSelf: 'flex-end' }]}>
+                      <Text style={s.promoBtnTxt}>{isRTL ? 'تسوق ←' : 'Shop →'}</Text>
+                    </View>
                   </View>
-                  <Text style={[s.promoTitle, isRTL && { textAlign: 'right' }]}>{item.title[language]}</Text>
-                  <Text style={[s.promoSub, isRTL && { textAlign: 'right' }]}>{item.sub[language]}</Text>
-                  <View style={[s.promoBtn, isRTL && { alignSelf: 'flex-end' }]}>
-                    <Text style={s.promoBtnTxt}>{isRTL ? 'تسوق ←' : 'Shop →'}</Text>
-                  </View>
+                  <Ionicons name={item.icon} size={70} color="rgba(255,255,255,0.2)" />
                 </View>
-                <Ionicons name={item.icon} size={70} color="rgba(255,255,255,0.2)" />
-              </View>
-              <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.07)', top: -40, right: -30 }} />
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
-      />
+                <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.07)', top: -40, right: -30 }} />
+              </LinearGradient>
+            </TouchableOpacity>
+          ))}
+        </Animated.View>
+      </View>
       <View style={s.dots}>
         {PROMO_BANNERS.map((_, i) => (
           <View key={i} style={[s.dot, i === active && s.dotActive]} />
@@ -333,52 +424,211 @@ function FeaturedSection({ navigation }) {
   );
 }
 
+// ─── Reviews Section ──────────────────────────────────────────────────────────
+// آراء ثابتة للتطبيق
+const APP_REVIEWS = [
+  { id: 'ar1', name: { ar: 'محمد السالم', en: 'Mohammed S.' }, rating: 5, date: { ar: '15 مارس', en: 'Mar 15' }, text: { ar: 'تطبيق رائع وسريع! حصلت على بطاقة الألعاب خلال ثوانٍ. أنصح به بشدة.', en: 'Amazing app, super fast! Got my gaming card in seconds. Highly recommended.' }, avatar: 'MS' },
+  { id: 'ar2', name: { ar: 'نورة العتيبي', en: 'Noura A.' }, rating: 5, date: { ar: '12 مارس', en: 'Mar 12' }, text: { ar: 'أفضل متجر بطاقات رقمية جربته. الأسعار ممتازة والدعم متجاوب جداً.', en: 'Best digital cards store I\'ve tried. Great prices and very responsive support.' }, avatar: 'NA' },
+  { id: 'ar3', name: { ar: 'خالد المطيري', en: 'Khalid M.' }, rating: 4, date: { ar: '10 مارس', en: 'Mar 10' }, text: { ar: 'واجهة مستخدم جميلة وسهلة. نظام النقاط رائع ويساعد على التوفير.', en: 'Beautiful and easy UI. The points system is great and helps save money.' }, avatar: 'KM' },
+  { id: 'ar4', name: { ar: 'ريم الشمري', en: 'Reem Sh.' }, rating: 5, date: { ar: '8 مارس', en: 'Mar 8' }, text: { ar: 'شحنت رصيد ستيم وPSN وكل شيء تم فوراً. التطبيق موثوق ومريح جداً.', en: 'Topped up Steam and PSN instantly. Very reliable and convenient app.' }, avatar: 'RS' },
+  { id: 'ar5', name: { ar: 'فيصل الدوسري', en: 'Faisal D.' }, rating: 5, date: { ar: '5 مارس', en: 'Mar 5' }, text: { ar: 'تجربة ممتازة من البداية. التنوع في البطاقات والخدمات لا مثيل له.', en: 'Excellent experience from the start. Unmatched variety of cards and services.' }, avatar: 'FD' },
+  { id: 'ar6', name: { ar: 'لينا حسن', en: 'Lina H.' }, rating: 4, date: { ar: '2 مارس', en: 'Mar 2' }, text: { ar: 'نظام الكوبونات والخصومات رائع. وفّرت أكثر من 30% على مشترياتي.', en: 'The coupons and discounts system is great. Saved over 30% on my purchases.' }, avatar: 'LH' },
+];
+
+function ReviewsSection() {
+  const { isRTL, colors: C, language, currentUser, addReview, getProductReviews } = useApp();
+  const lang = language === 'ar' ? 'ar' : 'en';
+  const [newRating, setNewRating] = useState(5);
+  const [newText, setNewText] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  // مراجعات المستخدم الحالي للتطبيق (نستخدم productId=0 للتطبيق)
+  const appReviews = getProductReviews ? getProductReviews(0) : [];
+  const userAlreadyReviewed = currentUser && appReviews.some(r => r.userId === currentUser.id);
+
+  const allReviews = [
+    ...APP_REVIEWS,
+    ...appReviews.map(r => ({
+      id: r.id, name: { ar: r.userName, en: r.userName },
+      rating: r.rating, date: { ar: r.date, en: r.date },
+      text: { ar: r.text, en: r.text }, avatar: r.userName?.slice(0,2).toUpperCase() || 'US',
+    })),
+  ];
+
+  const avgRating = allReviews.length > 0
+    ? (allReviews.reduce((s, r) => s + r.rating, 0) / allReviews.length).toFixed(1)
+    : '5.0';
+
+  const StarRow = ({ rating, size = 12 }) => (
+    <View style={{ flexDirection: 'row', gap: 1 }}>
+      {[1,2,3,4,5].map(i => (
+        <Ionicons key={i} name={i <= rating ? 'star' : 'star-outline'} size={size} color="#fbbf24" />
+      ))}
+    </View>
+  );
+
+  const StarSelector = () => (
+    <View style={{ flexDirection: 'row', gap: 6, justifyContent: 'center', marginVertical: 12 }}>
+      {[1,2,3,4,5].map(i => (
+        <TouchableOpacity key={i} onPress={() => setNewRating(i)}>
+          <Ionicons name={i <= newRating ? 'star' : 'star-outline'} size={30} color="#fbbf24" />
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
+  const handleSubmit = () => {
+    if (!currentUser) { Alert.alert(isRTL ? 'يجب تسجيل الدخول' : 'Sign in required', isRTL ? 'سجّل الدخول لكتابة مراجعة' : 'Please sign in to write a review'); return; }
+    if (!newText.trim()) { Alert.alert(isRTL ? 'خطأ' : 'Error', isRTL ? 'اكتب تعليقك أولاً' : 'Please write your review'); return; }
+    if (addReview) addReview(0, newRating, newText.trim());
+    setNewText('');
+    setNewRating(5);
+    setSubmitted(true);
+    setTimeout(() => setSubmitted(false), 3000);
+  };
+
+  return (
+    <View style={{ marginBottom: 8 }}>
+      {/* عنوان + متوسط التقييم */}
+      <View style={[s.secRow, isRTL && { flexDirection: 'row-reverse' }]}>
+        <View style={[s.secLeft, isRTL && { flexDirection: 'row-reverse' }]}>
+          <Ionicons name="chatbubbles" size={17} color="#a855f7" />
+          <Text style={[s.secTitle, { color: C.text }]}>{isRTL ? 'آراء العملاء' : 'Customer Reviews'}</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <StarRow rating={5} size={11} />
+          <Text style={{ fontSize: 12, fontWeight: '800', color: C.accent }}>{avgRating}</Text>
+        </View>
+      </View>
+
+      {/* بطاقات المراجعات */}
+      <FlatList
+        data={allReviews}
+        keyExtractor={r => r.id}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 14, gap: 10, paddingBottom: 8 }}
+        renderItem={({ item: r }) => (
+          <View style={{ width: 230, backgroundColor: C.bg2, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: C.border }}>
+            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <LinearGradient colors={['#7c3aed','#a855f7']} style={{ width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 12, fontWeight: '900', color: '#fff' }}>{r.avatar}</Text>
+              </LinearGradient>
+              <View style={{ flex: 1 }}>
+                <Text style={[{ fontSize: 13, fontWeight: '800', color: C.text }, isRTL && { textAlign: 'right' }]}>{r.name[lang]}</Text>
+                <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                  <StarRow rating={r.rating} size={11} />
+                </View>
+              </View>
+              <Text style={{ fontSize: 10, color: C.textMuted }}>{r.date[lang]}</Text>
+            </View>
+            <Text style={[{ fontSize: 12, color: C.textSub, lineHeight: 18 }, isRTL && { textAlign: 'right' }]} numberOfLines={3}>{r.text[lang]}</Text>
+            <View style={{ marginTop: 10, height: 3, borderRadius: 2, backgroundColor: C.border }}>
+              <View style={{ width: `${(r.rating / 5) * 100}%`, height: '100%', backgroundColor: '#fbbf24', borderRadius: 2 }} />
+            </View>
+          </View>
+        )}
+      />
+
+      {/* نموذج كتابة مراجعة */}
+      <View style={{ marginHorizontal: 14, marginTop: 4 }}>
+        <View style={{ backgroundColor: C.bg2, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border }}>
+          <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <Ionicons name="create-outline" size={18} color={C.primary2} />
+            <Text style={[{ fontSize: 14, fontWeight: '800', color: C.text }, isRTL && { textAlign: 'right' }]}>
+              {isRTL ? 'اكتب رأيك في التطبيق' : 'Write your review'}
+            </Text>
+          </View>
+
+          {submitted ? (
+            <View style={{ alignItems: 'center', padding: 16 }}>
+              <Text style={{ fontSize: 28, marginBottom: 8 }}>🎉</Text>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: C.green }}>
+                {isRTL ? 'شكراً لمراجعتك!' : 'Thank you for your review!'}
+              </Text>
+            </View>
+          ) : userAlreadyReviewed ? (
+            <View style={{ alignItems: 'center', padding: 12 }}>
+              <Text style={{ fontSize: 13, color: C.textMuted, textAlign: 'center' }}>
+                {isRTL ? '✓ لقد أضفت مراجعتك بالفعل' : '✓ You have already submitted a review'}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <StarSelector />
+              <TextInput
+                style={{ backgroundColor: C.bg3, borderRadius: 12, borderWidth: 1, borderColor: C.border, color: C.text, padding: 12, fontSize: 13, minHeight: 80, textAlignVertical: 'top', textAlign: isRTL ? 'right' : 'left' }}
+                placeholder={isRTL ? 'شارك تجربتك مع التطبيق...' : 'Share your experience with the app...'}
+                placeholderTextColor={C.textMuted}
+                value={newText}
+                onChangeText={setNewText}
+                multiline
+              />
+              <TouchableOpacity onPress={handleSubmit} style={{ marginTop: 10 }}>
+                <LinearGradient colors={['#7c3aed','#a855f7']} style={{ borderRadius: 12, padding: 13, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }}>
+                    {isRTL ? '📝 إرسال رأيك' : '📝 Submit Review'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 // ─── Home Screen ──────────────────────────────────────────────────────────────
 export default function HomeScreen({ navigation }) {
   const { t, isRTL, colors: C } = useApp();
 
   return (
-    <ScrollView style={[s.container, { backgroundColor: C.bg }]} showsVerticalScrollIndicator={false}>
+    <View style={[s.container, { backgroundColor: C.bg }]}>
       <MarqueeBanner />
-      <PromoBanners navigation={navigation} />
-      <StatsBar />
-      <FeaturedSection navigation={navigation} />
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <PromoBanners navigation={navigation} />
+        <StatsBar />
+        <FeaturedSection navigation={navigation} />
 
-      {/* Categories Grid Title */}
-      <View style={[s.secRow, isRTL && { flexDirection: 'row-reverse' }]}>
-        <View style={[s.secLeft, isRTL && { flexDirection: 'row-reverse' }]}>
-          <Ionicons name="apps" size={17} color={C.primary2} />
-          <Text style={[s.secTitle, { color: C.text }]}>{t('categories')}</Text>
+        {/* Categories Grid Title */}
+        <View style={[s.secRow, isRTL && { flexDirection: 'row-reverse' }]}>
+          <View style={[s.secLeft, isRTL && { flexDirection: 'row-reverse' }]}>
+            <Ionicons name="apps" size={17} color={C.primary2} />
+            <Text style={[s.secTitle, { color: C.text }]}>{t('categories')}</Text>
+          </View>
+          <TouchableOpacity
+            style={[s.seeAllBtn, { borderColor: C.accent + '44' }]}
+            onPress={() => navigation.navigate('Products')}
+          >
+            <Text style={[s.seeAllTxt, { color: C.accent }]}>{t('seeAll')}</Text>
+            <Ionicons name={isRTL ? 'chevron-back' : 'chevron-forward'} size={12} color={C.accent} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={[s.seeAllBtn, { borderColor: C.accent + '44' }]}
-          onPress={() => navigation.navigate('Products')}
-        >
-          <Text style={[s.seeAllTxt, { color: C.accent }]}>{t('seeAll')}</Text>
-          <Ionicons name={isRTL ? 'chevron-back' : 'chevron-forward'} size={12} color={C.accent} />
-        </TouchableOpacity>
-      </View>
 
-      {/* Categories Grid */}
-      <View style={s.catGrid}>
-        {HOME_CATEGORIES.map(cat => (
-          <CategoryGridCard
-            key={cat.id}
-            category={cat}
-            onPress={() => navigation.navigate('Products', {
-              filterCategory: cat.filter === 'All' ? undefined : cat.filter,
-            })}
-          />
+        {/* Categories Grid */}
+        <View style={s.catGrid}>
+          {HOME_CATEGORIES.map(cat => (
+            <CategoryGridCard
+              key={cat.id}
+              category={cat}
+              onPress={() => navigation.navigate('Products', {
+                filterCategory: cat.filter === 'All' ? undefined : cat.filter,
+              })}
+            />
+          ))}
+        </View>
+
+        {/* Product sections per category */}
+        {HOME_CATEGORIES.filter(c => c.filter !== 'All').map(cat => (
+          <CategorySection key={cat.id} category={cat} navigation={navigation} />
         ))}
-      </View>
 
-      {/* Product sections per category */}
-      {HOME_CATEGORIES.filter(c => c.filter !== 'All').map(cat => (
-        <CategorySection key={cat.id} category={cat} navigation={navigation} />
-      ))}
+        <ReviewsSection />
 
-      <View style={{ height: 28 }} />
-    </ScrollView>
+        <View style={{ height: 28 }} />
+      </ScrollView>
+    </View>
   );
 }
 

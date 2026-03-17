@@ -4,7 +4,8 @@ import {
   TextInput, Alert, Modal, FlatList,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useApp } from '../context/AppContext';
+import { Ionicons } from '@expo/vector-icons';
+import { useApp } from '../context/AppContext.js';
 
 // ─── GUEST GATE ───────────────────────────────────────────────────────────────
 function GuestGate({ navigation }) {
@@ -25,7 +26,8 @@ function GuestGate({ navigation }) {
 
 // ─── ORDERS ───────────────────────────────────────────────────────────────────
 export function OrdersScreen({ navigation }) {
-  const { orders, t, isRTL, currentUser, colors: C } = useApp();
+  const { orders, invoices, t, isRTL, currentUser, colors: C } = useApp();
+  const [selectedOrder, setSelectedOrder] = useState(null);
   if (!currentUser) return <GuestGate navigation={navigation} />;
 
   const completed = orders.filter(o => o.status === 'completed').length;
@@ -34,6 +36,77 @@ export function OrdersScreen({ navigation }) {
     color: st === 'completed' ? '#34d399' : st === 'pending' ? '#fbbf24' : '#f87171',
     label: st === 'completed' ? t('completed') : st === 'pending' ? t('pending') : t('failed'),
   });
+
+  if (selectedOrder) {
+    const inv = invoices?.find(inv => inv.items?.some(item => item.name?.includes(selectedOrder.name?.split(' (')[0])));
+    const st = getStatus(selectedOrder.status);
+    return (
+      <ScrollView style={[s.container, { backgroundColor: C.bg }]} contentContainerStyle={{ padding: 14 }}>
+        <LinearGradient colors={['#4c1d95','#7c3aed','#a855f7']} style={{ borderRadius: 18, padding: 20, marginBottom: 14 }}>
+          <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <View>
+              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>{isRTL ? 'رقم الطلب' : 'Order ID'}</Text>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: '#fbbf24' }}>{selectedOrder.id}</Text>
+            </View>
+            <View style={[s.badge, { backgroundColor: st.bg }]}>
+              <Text style={[s.badgeText, { color: st.color }]}>{st.label}</Text>
+            </View>
+          </View>
+          <View style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)' }}>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff', marginBottom: 4 }}>{selectedOrder.name}</Text>
+            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>{selectedOrder.customer} · {selectedOrder.date}</Text>
+          </View>
+        </LinearGradient>
+        <View style={[s.settingGroup, { backgroundColor: C.bg2, borderColor: C.border, padding: 14, marginBottom: 12 }]}>
+          <Text style={[{ fontSize: 14, fontWeight: '800', color: C.text, marginBottom: 12 }, isRTL && s.rtlText]}>{isRTL ? 'تفاصيل المبلغ' : 'Amount Details'}</Text>
+          <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.border }}>
+            <Text style={{ fontSize: 13, color: C.textMuted }}>{isRTL ? 'المنتج' : 'Product'}</Text>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: C.textSub }}>{selectedOrder.amount}</Text>
+          </View>
+          <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', paddingTop: 10 }}>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>{t('total')}</Text>
+            <Text style={{ fontSize: 17, fontWeight: '900', color: C.accent }}>{selectedOrder.amount}</Text>
+          </View>
+        </View>
+        <View style={[s.settingGroup, { backgroundColor: C.bg2, borderColor: C.border, padding: 14, marginBottom: 12 }]}>
+          <Text style={[{ fontSize: 14, fontWeight: '800', color: C.text, marginBottom: 12 }, isRTL && s.rtlText]}>{isRTL ? 'طريقة الدفع' : 'Payment Method'}</Text>
+          <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(124,58,237,0.15)', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 22 }}>
+                {selectedOrder.paymentLabel ? (selectedOrder.paymentLabel.en?.includes('Points') ? '⭐' : selectedOrder.paymentLabel.en?.includes('Visa') || selectedOrder.paymentLabel.en?.includes('Mastercard') ? '💳' : '💰') : '💰'}
+              </Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[{ fontSize: 14, fontWeight: '700', color: C.text }, isRTL && s.rtlText]}>
+                {selectedOrder.paymentLabel ? selectedOrder.paymentLabel[isRTL ? 'ar' : 'en'] : (isRTL ? 'المحفظة الإلكترونية' : 'Digital Wallet')}
+              </Text>
+              {selectedOrder.usedPoints > 0 && selectedOrder.pointsDiscount > 0 && (
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                  {isRTL ? `خصم نقاطي: $${selectedOrder.pointsDiscount?.toFixed(2)}` : `Points discount: $${selectedOrder.pointsDiscount?.toFixed(2)}`}
+                </Text>
+              )}
+            </View>
+          </View>
+        </View>
+        {inv && (
+          <View style={[s.settingGroup, { backgroundColor: C.bg2, borderColor: C.border, padding: 14, marginBottom: 12 }]}>
+            <Text style={[{ fontSize: 14, fontWeight: '800', color: C.text, marginBottom: 8 }, isRTL && s.rtlText]}>
+              {isRTL ? 'الفاتورة' : 'Invoice'}: <Text style={{ color: C.accent }}>{inv.id}</Text>
+            </Text>
+            {inv.items?.map((item, i) => (
+              <View key={i} style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', paddingVertical: 6 }}>
+                <Text style={[{ fontSize: 12, color: C.textMuted, flex: 1 }, isRTL && s.rtlText]}>{item.name}</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: item.amount?.startsWith('-') ? '#34d399' : C.textSub }}>{item.amount}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+        <TouchableOpacity style={{ alignItems: 'center', padding: 14 }} onPress={() => setSelectedOrder(null)}>
+          <Text style={{ color: C.textMuted, fontSize: 13 }}>← {isRTL ? 'العودة للطلبات' : 'Back to Orders'}</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    );
+  }
 
   if (orders.length === 0) {
     return (
@@ -61,7 +134,8 @@ export function OrdersScreen({ navigation }) {
       {orders.map((o, i) => {
         const st = getStatus(o.status);
         return (
-          <View key={i} style={[s.orderItem, { backgroundColor: C.bg2, borderColor: C.border }]}>
+          <TouchableOpacity key={i} style={[s.orderItem, { backgroundColor: C.bg2, borderColor: C.border }]}
+            onPress={() => setSelectedOrder(o)} activeOpacity={0.8}>
             <View style={[s.orderTop, isRTL && s.rowRev]}>
               <Text style={[s.orderId, { color: C.accent }]}>{o.id}</Text>
               <View style={[s.badge, { backgroundColor: st.bg }]}>
@@ -71,15 +145,19 @@ export function OrdersScreen({ navigation }) {
             <Text style={[s.orderName, { color: C.textSub }, isRTL && s.rtlText]}>{o.name}</Text>
             <View style={[s.orderBottom, isRTL && s.rowRev]}>
               <Text style={[s.orderCustomer, { color: C.textMuted }]}>{o.customer} · {o.date}</Text>
-              <Text style={[s.orderAmount, { color: C.text }]}>{o.amount}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[s.orderAmount, { color: C.text }]}>{o.amount}</Text>
+                <Ionicons name={isRTL ? 'chevron-back' : 'chevron-forward'} size={14} color={C.textMuted} />
+              </View>
             </View>
-          </View>
+          </TouchableOpacity>
         );
       })}
       <View style={{ height: 16 }} />
     </ScrollView>
   );
 }
+
 
 // ─── WALLET ───────────────────────────────────────────────────────────────────
 export function WalletScreen({ navigation }) {
@@ -277,9 +355,14 @@ export function AccountScreen({ navigation }) {
   };
 
   const menuItems = [
-    { icon: '⚡', title: t('transactions'), sub: t('viewPayments'),  route: 'Transactions', bg: 'rgba(124,58,237,0.2)' },
-    { icon: '📄', title: t('invoice'),      sub: t('viewInvoices'),  route: 'Invoice',      bg: 'rgba(251,191,36,0.15)' },
-    { icon: '⚙️', title: t('settings'),     sub: t('appPreferences'),route: 'Settings',     bg: 'rgba(248,113,113,0.15)' },
+    { icon: '❤️', title: t('myWishlist'),       sub: t('viewWishlist'),       route: 'Wishlist',       bg: 'rgba(248,113,113,0.15)' },
+    { icon: '⭐', title: t('loyaltyPoints'),      sub: t('viewPoints'),         route: 'Points',         bg: 'rgba(251,191,36,0.15)'  },
+    { icon: '🔗', title: t('referral'),           sub: t('viewReferral'),       route: 'Referral',       bg: 'rgba(52,211,153,0.15)'  },
+    { icon: '🎫', title: t('support'),            sub: t('viewSupport'),        route: 'Support',        bg: 'rgba(96,165,250,0.15)'  },
+    { icon: '💳', title: t('paymentMethods'),     sub: t('viewPaymentMethods'), route: 'PaymentMethods', bg: 'rgba(124,58,237,0.15)'  },
+    { icon: '⚡', title: t('transactions'),       sub: t('viewPayments'),       route: 'Transactions',   bg: 'rgba(124,58,237,0.2)'   },
+    { icon: '📄', title: t('invoice'),            sub: t('viewInvoices'),       route: 'Invoice',        bg: 'rgba(251,191,36,0.15)'  },
+    { icon: '⚙️', title: t('settings'),           sub: t('appPreferences'),     route: 'Settings',       bg: 'rgba(248,113,113,0.15)' },
   ];
 
   const LangToggle = () => (
@@ -721,6 +804,549 @@ export function SettingsScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+    </ScrollView>
+  );
+}
+
+// ─── WISHLIST SCREEN ──────────────────────────────────────────────────────────
+export function WishlistScreen({ navigation }) {
+  const { wishlist, toggleWishlist, t, isRTL, colors: C, currentUser } = useApp();
+  const { PRODUCTS } = require('../data/index.js');
+  if (!currentUser) return <GuestGate navigation={navigation} />;
+  const items = PRODUCTS.filter(p => wishlist.includes(p.id));
+  return (
+    <ScrollView style={[s.container, { backgroundColor: C.bg }]}>
+      {items.length === 0 ? (
+        <View style={[s.centerWrap, { backgroundColor: C.bg }]}>
+          <Text style={{ fontSize: 56, marginBottom: 16 }}>🤍</Text>
+          <Text style={[s.gateTitle, { color: C.text }]}>{t('wishlistEmpty')}</Text>
+          <Text style={[s.gateSub, { color: C.textMuted }]}>{t('wishlistEmptySub')}</Text>
+          <TouchableOpacity style={s.fullWidth} onPress={() => navigation.navigate('Products')}>
+            <LinearGradient colors={['#7c3aed','#a855f7']} style={s.actionBtn}>
+              <Text style={s.actionBtnText}>{t('products')}</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={{ padding: 14, gap: 10 }}>
+          {items.map(p => (
+            <TouchableOpacity key={p.id} style={[s.menuItem, { backgroundColor: C.bg2, borderColor: C.border }]}
+              onPress={() => navigation.navigate('Home', { screen: 'ProductDetail', params: { product: p } })}>
+              <View style={[s.menuIcon, { backgroundColor: `${C.primary}22` }]}><Text style={{ fontSize: 20 }}>🎁</Text></View>
+              <View style={[s.menuText, isRTL && { marginRight: 12, marginLeft: 0 }]}>
+                <Text style={[s.menuTitle, { color: C.text }, isRTL && s.rtlText]}>{p.name}</Text>
+                <Text style={[s.menuSub, { color: C.accent }]}>{t('from')} ${p.pkgs[0].p}</Text>
+              </View>
+              <TouchableOpacity onPress={() => toggleWishlist(p.id)} style={{ padding: 8 }}>
+                <Text style={{ fontSize: 22 }}>❤️</Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+      <View style={{ height: 20 }} />
+    </ScrollView>
+  );
+}
+
+// ─── POINTS SCREEN ────────────────────────────────────────────────────────────
+export function PointsScreen({ navigation }) {
+  const { pointsData, t, isRTL, colors: C, currentUser } = useApp();
+  if (!currentUser) return <GuestGate navigation={navigation} />;
+  const { balance, history } = pointsData;
+  return (
+    <ScrollView style={[s.container, { backgroundColor: C.bg }]}>
+      <LinearGradient colors={['#4c1d95','#7c3aed','#a855f7']} style={[s.walletCard, { margin: 14 }]}>
+        <Text style={[s.walLabel, isRTL && s.rtlText]}>{t('pointsBalance')}</Text>
+        <Text style={s.walBalance}>{balance.toLocaleString()}</Text>
+        <Text style={[s.walUser, isRTL && s.rtlText]}>{t('pointsInfo')}</Text>
+        <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>≈ ${(balance / 1000).toFixed(2)}</Text>
+      </LinearGradient>
+      <View style={{ paddingHorizontal: 14 }}>
+        <Text style={[s.groupLabel, { color: C.textMuted }, isRTL && s.rtlText]}>{t('pointsHistory')}</Text>
+        {history.length === 0 ? (
+          <View style={[s.settingGroup, { backgroundColor: C.bg2, borderColor: C.border, padding: 24, alignItems: 'center' }]}>
+            <Text style={{ fontSize: 40, marginBottom: 8 }}>⭐</Text>
+            <Text style={[{ fontSize: 13, color: C.textMuted }, isRTL && s.rtlText]}>{t('noPointsYet')}</Text>
+          </View>
+        ) : history.map((h, i) => (
+          <View key={h.id || i} style={[s.transItem, { backgroundColor: C.bg2, borderColor: C.border }]}>
+            <View style={[s.transIcon, { backgroundColor: h.type === 'earn' || h.type === 'bonus' ? 'rgba(52,211,153,0.15)' : 'rgba(248,113,113,0.15)' }]}>
+              <Text style={{ fontSize: 18 }}>{h.type === 'earn' ? '⭐' : h.type === 'bonus' ? '🎁' : '🔄'}</Text>
+            </View>
+            <View style={[s.transInfo, isRTL && { marginRight: 10, marginLeft: 0 }]}>
+              <Text style={[s.transName, { color: C.text }, isRTL && s.rtlText]}>{h.description?.[isRTL ? 'ar' : 'en'] || ''}</Text>
+              <Text style={[s.transDate, { color: C.textMuted }]}>{h.date}</Text>
+            </View>
+            <Text style={[s.transAmount, { color: h.amount > 0 ? '#34d399' : '#f87171' }]}>{h.amount > 0 ? '+' : ''}{h.amount} pts</Text>
+          </View>
+        ))}
+      </View>
+      <View style={{ height: 20 }} />
+    </ScrollView>
+  );
+}
+
+// ─── REFERRAL SCREEN ─────────────────────────────────────────────────────────
+export function ReferralScreen({ navigation }) {
+  const { referralData, shareReferralCode, changeReferralCode, t, isRTL, colors: C, currentUser } = useApp();
+  const [showChangeCode, setShowChangeCode] = useState(false);
+  const [newCode, setNewCode] = useState('');
+  const [codeError, setCodeError] = useState('');
+  if (!currentUser) return <GuestGate navigation={navigation} />;
+  const { code, referred, totalEarnings, codeChanged } = referralData || {};
+
+  const handleChangeCode = () => {
+    setCodeError('');
+    if (newCode.trim().length < 4) { setCodeError(isRTL ? 'الكود 4 أحرف على الأقل' : 'Min 4 characters'); return; }
+    const result = changeReferralCode(newCode);
+    if (result.success) { setShowChangeCode(false); setNewCode(''); }
+    else if (result.error === 'exists') setCodeError(isRTL ? 'هذا الكود مستخدم' : 'Code already taken');
+    else if (result.error === 'invalid_length') setCodeError(isRTL ? 'الكود بين 4-12 حرف' : '4-12 characters');
+    else setCodeError(isRTL ? 'حدث خطأ' : 'Error occurred');
+  };
+
+  return (
+    <ScrollView style={[s.container, { backgroundColor: C.bg }]}>
+      <LinearGradient colors={['#92400e','#d97706','#fbbf24']} style={[s.walletCard, { margin: 14 }]}>
+        <Text style={[s.walLabel, isRTL && s.rtlText]}>{t('referralCode')}</Text>
+        <Text style={[s.walBalance, { letterSpacing: 4, fontSize: 28 }]}>{code}</Text>
+        <Text style={[s.walUser, isRTL && s.rtlText]}>{t('referralInfo')}</Text>
+      </LinearGradient>
+      <View style={{ paddingHorizontal: 14, gap: 10 }}>
+        <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 10 }}>
+          <View style={[s.statCard, { backgroundColor: C.bg2, borderColor: C.border }]}>
+            <Text style={[s.statLabel, { color: C.textMuted }]}>{t('referredUsers')}</Text>
+            <Text style={[s.statValue, { color: C.accent }]}>{referred?.length || 0}</Text>
+          </View>
+          <View style={[s.statCard, { backgroundColor: C.bg2, borderColor: C.border }]}>
+            <Text style={[s.statLabel, { color: C.textMuted }]}>{t('referralEarnings')}</Text>
+            <Text style={[s.statValue, { color: '#34d399' }]}>{totalEarnings || 0} pts</Text>
+          </View>
+        </View>
+        <TouchableOpacity onPress={shareReferralCode}>
+          <LinearGradient colors={['#7c3aed','#a855f7']} style={s.actionBtn}>
+            <Text style={s.actionBtnText}>🔗 {t('shareCode')}</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+        {!codeChanged ? (
+          showChangeCode ? (
+            <View style={[s.settingGroup, { backgroundColor: C.bg2, borderColor: C.border, padding: 14 }]}>
+              <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 8, backgroundColor: 'rgba(251,191,36,0.1)', borderRadius: 10, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(251,191,36,0.3)' }}>
+                <Text style={{ fontSize: 16 }}>⚠️</Text>
+                <Text style={[{ fontSize: 12, color: C.accent, flex: 1, lineHeight: 18 }, isRTL && s.rtlText]}>
+                  {isRTL ? 'تحذير: يمكنك تغيير الكود مرة واحدة فقط.' : 'Warning: You can only change your code once.'}
+                </Text>
+              </View>
+              <Text style={[s.inputLabel, { color: C.textMuted }, isRTL && s.rtlText]}>{isRTL ? 'الكود الجديد (4-12 حرف)' : 'New code (4-12 chars)'}</Text>
+              <TextInput style={[s.textInput, { backgroundColor: C.bg3, borderColor: codeError ? '#f87171' : C.border, color: C.text }, isRTL && { textAlign: 'right' }]}
+                placeholder={isRTL ? 'أدخل كودك المخصص' : 'Enter your custom code'} placeholderTextColor={C.textMuted}
+                value={newCode} onChangeText={v => { setNewCode(v.toUpperCase().replace(/[^A-Z0-9]/g, '')); setCodeError(''); }}
+                autoCapitalize="characters" maxLength={12} />
+              {!!codeError && <Text style={[{ fontSize: 11, color: '#f87171', marginBottom: 8 }, isRTL && s.rtlText]}>{codeError}</Text>}
+              <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 8 }}>
+                <TouchableOpacity style={{ flex: 1 }} onPress={handleChangeCode}>
+                  <LinearGradient colors={['#d97706','#f59e0b']} style={[s.actionBtn, { paddingVertical: 12 }]}>
+                    <Text style={s.actionBtnText}>{isRTL ? 'تأكيد التغيير' : 'Confirm Change'}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+                <TouchableOpacity style={{ flex: 1, borderWidth: 1, borderColor: C.border, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingVertical: 12 }}
+                  onPress={() => { setShowChangeCode(false); setNewCode(''); setCodeError(''); }}>
+                  <Text style={{ color: C.textMuted, fontWeight: '700', fontSize: 14 }}>{t('cancel')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity style={[s.settingGroup, { backgroundColor: C.bg2, borderColor: C.border }]} onPress={() => setShowChangeCode(true)}>
+              <View style={[s.settingRow, { borderBottomWidth: 0 }, isRTL && s.rowRev]}>
+                <Text style={s.settingIcon}>✏️</Text>
+                <Text style={[s.settingLabel, { color: C.textSub }, isRTL && s.rtlText]}>{isRTL ? 'تغيير كود الإحالة (مرة واحدة)' : 'Change referral code (once only)'}</Text>
+                <Text style={[s.settingRight, { color: C.textMuted }]}>{isRTL ? '‹' : '›'}</Text>
+              </View>
+            </TouchableOpacity>
+          )
+        ) : (
+          <View style={[s.settingGroup, { backgroundColor: 'rgba(52,211,153,0.08)', borderColor: 'rgba(52,211,153,0.2)', padding: 12 }]}>
+            <Text style={{ fontSize: 12, color: '#34d399', textAlign: 'center' }}>✓ {isRTL ? 'تم تغيير الكود — لا يمكن تغييره مرة أخرى' : 'Code changed — cannot be changed again'}</Text>
+          </View>
+        )}
+        <Text style={[s.groupLabel, { color: C.textMuted }, isRTL && s.rtlText]}>{t('referredUsers')}</Text>
+        {(!referred || referred.length === 0) ? (
+          <View style={[s.settingGroup, { backgroundColor: C.bg2, borderColor: C.border, padding: 24, alignItems: 'center' }]}>
+            <Text style={{ fontSize: 40, marginBottom: 8 }}>👥</Text>
+            <Text style={[{ fontSize: 13, color: C.textMuted }, isRTL && s.rtlText]}>{t('noReferrals')}</Text>
+          </View>
+        ) : referred.map((r, i) => (
+          <View key={i} style={[s.menuItem, { backgroundColor: C.bg2, borderColor: C.border }]}>
+            <View style={[s.menuIcon, { backgroundColor: 'rgba(52,211,153,0.15)' }]}><Text style={{ fontSize: 20 }}>👤</Text></View>
+            <View style={[s.menuText, isRTL && { marginRight: 12, marginLeft: 0 }]}>
+              <Text style={[s.menuTitle, { color: C.text }, isRTL && s.rtlText]}>{r.name}</Text>
+              <Text style={[s.menuSub, { color: C.textMuted }]}>{r.date}</Text>
+            </View>
+            <Text style={{ color: '#34d399', fontWeight: '800' }}>+{r.earned} pts</Text>
+          </View>
+        ))}
+      </View>
+      <View style={{ height: 20 }} />
+    </ScrollView>
+  );
+}
+
+// ─── SUPPORT SCREEN ───────────────────────────────────────────────────────────
+
+// شاشة التفاصيل — component منفصل لضمان تحديث الـ state
+function TicketDetailView({ ticketId, onBack, isRTL, colors: C, t, tickets, addTicketReply, closeTicket, currentUser }) {
+  const [replyText, setReplyText] = React.useState('');
+
+  // قراءة التذكرة مباشرة من tickets في كل render
+  const ticket = tickets.find(tk => tk.id === ticketId);
+
+  if (!ticket) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ color: C.textMuted }}>{'...'}</Text>
+      </View>
+    );
+  }
+
+  const statusColor = st => st === 'open' ? '#fbbf24' : st === 'in-progress' ? '#60a5fa' : '#34d399';
+  const statusLabel = st => st === 'open'
+    ? (isRTL ? 'مفتوح' : 'Open')
+    : st === 'in-progress'
+      ? (isRTL ? 'جاري' : 'In Progress')
+      : (isRTL ? 'مغلوق' : 'Closed');
+
+  const isClosed = ticket.status === 'closed';
+
+  const handleSend = () => {
+    if (!replyText.trim()) return;
+    addTicketReply(ticketId, replyText.trim());
+    setReplyText('');
+  };
+
+  const handleClose = () => {
+    Alert.alert(
+      isRTL ? 'إغلاق التذكرة' : 'Close Ticket',
+      isRTL ? 'هل تريد إغلاق هذه التذكرة؟ لن تتمكن من إعادة فتحها.' : 'Close this ticket? You cannot reopen it.',
+      [
+        { text: isRTL ? 'إلغاء' : 'Cancel', style: 'cancel' },
+        {
+          text: isRTL ? 'إغلاق' : 'Close',
+          style: 'destructive',
+          onPress: () => closeTicket(ticketId),
+        },
+      ]
+    );
+  };
+
+  return (
+    <ScrollView style={[s.container, { backgroundColor: C.bg }]} contentContainerStyle={{ padding: 14 }}>
+      {/* رأس التذكرة */}
+      <View style={[s.settingGroup, { backgroundColor: C.bg2, borderColor: C.border, padding: 14, marginBottom: 10 }]}>
+        <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+          <Text style={[{ fontSize: 15, fontWeight: '800', color: C.text, flex: 1 }, isRTL && s.rtlText]}>{ticket.subject}</Text>
+          <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, backgroundColor: `${statusColor(ticket.status)}22`, marginLeft: 8 }}>
+            <Text style={{ fontSize: 10, fontWeight: '800', color: statusColor(ticket.status) }}>{statusLabel(ticket.status)}</Text>
+          </View>
+        </View>
+        <Text style={[{ fontSize: 11, color: C.textMuted }, isRTL && s.rtlText]}>{ticket.category} · {ticket.createdAt}</Text>
+        <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: C.border }}>
+          <Text style={[{ fontSize: 13, color: C.textSub, lineHeight: 20 }, isRTL && s.rtlText]}>{ticket.message}</Text>
+        </View>
+      </View>
+
+      {/* الردود */}
+      {ticket.replies.map((r, i) => (
+        <View key={i} style={[s.settingGroup, {
+          backgroundColor: r.from === 'Support' ? `${C.primary}11` : C.bg2,
+          borderColor: r.from === 'Support' ? `${C.primary}44` : C.border,
+          padding: 12, marginBottom: 8,
+        }]}>
+          <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            <View style={{ width: 28, height: 28, borderRadius: 14,
+              backgroundColor: r.from === 'Support' ? `${C.primary}33` : `${C.accent}22`,
+              alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 14 }}>{r.from === 'Support' ? '🎯' : '👤'}</Text>
+            </View>
+            <Text style={[{ fontSize: 11, fontWeight: '800', color: r.from === 'Support' ? C.primary2 : C.textMuted }, isRTL && s.rtlText]}>
+              {r.from === 'Support' ? (isRTL ? 'فريق الدعم' : 'Support Team') : r.from}
+            </Text>
+            <Text style={{ fontSize: 9, color: C.textMuted, marginLeft: 'auto' }}>{r.date}</Text>
+          </View>
+          <Text style={[{ fontSize: 13, color: C.text, lineHeight: 20 }, isRTL && s.rtlText]}>{r.message}</Text>
+        </View>
+      ))}
+
+      {/* مربع الرد أو رسالة الإغلاق */}
+      {isClosed ? (
+        <View style={{ alignItems: 'center', padding: 16, borderRadius: 14, backgroundColor: 'rgba(52,211,153,0.08)', borderWidth: 1, borderColor: 'rgba(52,211,153,0.25)', marginTop: 4 }}>
+          <Text style={{ fontSize: 22, marginBottom: 6 }}>🔒</Text>
+          <Text style={{ fontSize: 15, color: '#34d399', fontWeight: '800' }}>
+            {isRTL ? 'التذكرة مغلوقة' : 'Ticket Closed'}
+          </Text>
+          <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 4, textAlign: 'center' }}>
+            {isRTL ? 'يمكنك فتح تذكرة جديدة إذا احتجت مساعدة' : 'You can open a new ticket if you need further help'}
+          </Text>
+        </View>
+      ) : (
+        <View style={{ marginTop: 4, gap: 10 }}>
+          <TextInput
+            style={[s.textInput, { backgroundColor: C.bg2, borderColor: C.border, color: C.text, height: 90, textAlignVertical: 'top' }, isRTL && { textAlign: 'right' }]}
+            placeholder={t('replyPlaceholder')}
+            placeholderTextColor={C.textMuted}
+            value={replyText}
+            onChangeText={setReplyText}
+            multiline
+          />
+          <TouchableOpacity onPress={handleSend}>
+            <LinearGradient colors={['#7c3aed', '#a855f7']} style={s.actionBtn}>
+              <Text style={s.actionBtnText}>{t('addReply')}</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ alignItems: 'center', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(248,113,113,0.4)', backgroundColor: 'rgba(248,113,113,0.08)' }}
+            onPress={handleClose}>
+            <Text style={{ fontSize: 13, color: '#f87171', fontWeight: '800' }}>
+              🔒 {isRTL ? 'إغلاق التذكرة' : 'Close Ticket'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <TouchableOpacity style={{ alignItems: 'center', marginTop: 16, padding: 10 }} onPress={onBack}>
+        <Text style={{ color: C.textMuted, fontSize: 13 }}>← {isRTL ? 'رجوع' : 'Back'}</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+export function SupportScreen({ navigation }) {
+  const { tickets, createTicket, addTicketReply, closeTicket, TICKET_CATEGORIES, t, isRTL, colors: C, currentUser } = useApp();
+  const [view, setView] = useState('list');           // 'list' | 'new' | 'detail'
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const [category, setCategory] = useState(TICKET_CATEGORIES[0]);
+  const [activeTicketId, setActiveTicketId] = useState(null);
+
+  if (!currentUser) return <GuestGate navigation={navigation} />;
+
+  const statusColor = st => st === 'open' ? '#fbbf24' : st === 'in-progress' ? '#60a5fa' : '#34d399';
+  const statusLabel = st => st === 'open'
+    ? (isRTL ? 'مفتوح' : 'Open')
+    : st === 'in-progress'
+      ? (isRTL ? 'جاري' : 'In Progress')
+      : (isRTL ? 'مغلوق' : 'Closed');
+
+  // ─── شاشة تفاصيل التذكرة ─────────────────────────────────────────────────
+  if (view === 'detail' && activeTicketId) {
+    return (
+      <TicketDetailView
+        ticketId={activeTicketId}
+        tickets={tickets}
+        onBack={() => { setView('list'); setActiveTicketId(null); }}
+        isRTL={isRTL}
+        colors={C}
+        t={t}
+        addTicketReply={addTicketReply}
+        closeTicket={closeTicket}
+        currentUser={currentUser}
+      />
+    );
+  }
+
+  // ─── شاشة إنشاء تذكرة ────────────────────────────────────────────────────
+  if (view === 'new') return (
+    <ScrollView style={[s.container, { backgroundColor: C.bg }]} contentContainerStyle={{ padding: 14 }}>
+      <Text style={[s.groupLabel, { color: C.textMuted }, isRTL && s.rtlText]}>{t('ticketCategory')}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {TICKET_CATEGORIES.map(c => (
+            <TouchableOpacity key={c} onPress={() => setCategory(c)}
+              style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
+                backgroundColor: category === c ? C.primary : C.bg2,
+                borderColor: category === c ? C.primary : C.border }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: category === c ? '#fff' : C.textMuted }}>{c}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+      <Text style={[s.inputLabel, { color: C.textMuted }, isRTL && s.rtlText]}>{t('ticketSubject')}</Text>
+      <TextInput
+        style={[s.textInput, { backgroundColor: C.bg2, borderColor: C.border, color: C.text }, isRTL && { textAlign: 'right' }]}
+        placeholder={t('ticketSubject')} placeholderTextColor={C.textMuted} value={subject} onChangeText={setSubject} />
+      <Text style={[s.inputLabel, { color: C.textMuted }, isRTL && s.rtlText]}>{t('ticketMessage')}</Text>
+      <TextInput
+        style={[s.textInput, { backgroundColor: C.bg2, borderColor: C.border, color: C.text, height: 120, textAlignVertical: 'top' }, isRTL && { textAlign: 'right' }]}
+        placeholder={t('ticketMessage')} placeholderTextColor={C.textMuted} value={message} onChangeText={setMessage} multiline />
+      <TouchableOpacity onPress={() => {
+        if (!subject.trim() || !message.trim()) return;
+        const r = createTicket(subject.trim(), category, message.trim());
+        if (r.success) {
+          setSubject(''); setMessage('');
+          setView('list');
+          Alert.alert(t('ticketCreated'));
+        }
+      }}>
+        <LinearGradient colors={['#7c3aed', '#a855f7']} style={s.actionBtn}>
+          <Text style={s.actionBtnText}>{t('submitTicket')}</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+      <TouchableOpacity style={{ alignItems: 'center', marginTop: 12 }} onPress={() => setView('list')}>
+        <Text style={{ color: C.textMuted, fontSize: 13 }}>← {isRTL ? 'رجوع' : 'Back'}</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+
+  // ─── قائمة التذاكر ────────────────────────────────────────────────────────
+  return (
+    <ScrollView style={[s.container, { backgroundColor: C.bg }]}>
+      <TouchableOpacity style={{ margin: 14 }} onPress={() => setView('new')}>
+        <LinearGradient colors={['#7c3aed', '#a855f7']} style={s.actionBtn}>
+          <Text style={s.actionBtnText}>+ {t('createTicket')}</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+      <View style={{ paddingHorizontal: 14 }}>
+        <Text style={[s.groupLabel, { color: C.textMuted }, isRTL && s.rtlText]}>{t('myTickets')}</Text>
+        {tickets.length === 0 ? (
+          <View style={[s.settingGroup, { backgroundColor: C.bg2, borderColor: C.border, padding: 24, alignItems: 'center' }]}>
+            <Text style={{ fontSize: 40, marginBottom: 8 }}>🎫</Text>
+            <Text style={[{ fontSize: 13, color: C.textMuted }, isRTL && s.rtlText]}>{t('noTickets')}</Text>
+          </View>
+        ) : tickets.map(tk => (
+          <TouchableOpacity
+            key={tk.id}
+            style={[s.menuItem, { backgroundColor: C.bg2, borderColor: C.border }]}
+            onPress={() => { setActiveTicketId(tk.id); setView('detail'); }}>
+            <View style={[s.menuIcon, { backgroundColor: `${statusColor(tk.status)}22` }]}>
+              <Text style={{ fontSize: 18 }}>🎫</Text>
+            </View>
+            <View style={[s.menuText, isRTL && { marginRight: 12, marginLeft: 0 }]}>
+              <Text style={[s.menuTitle, { color: C.text }, isRTL && s.rtlText]} numberOfLines={1}>{tk.subject}</Text>
+              <Text style={[s.menuSub, { color: C.textMuted }]}>{tk.category} · {tk.createdAt}</Text>
+            </View>
+            <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20, backgroundColor: `${statusColor(tk.status)}22` }}>
+              <Text style={{ fontSize: 9, fontWeight: '800', color: statusColor(tk.status) }}>{statusLabel(tk.status)}</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <View style={{ height: 20 }} />
+    </ScrollView>
+  );
+}
+
+
+// ─── PAYMENT METHODS SCREEN ───────────────────────────────────────────────────
+export function PaymentMethodsScreen({ navigation }) {
+  const { paymentMethods, addPaymentMethod, removePaymentMethod, setDefaultPaymentMethod, t, isRTL, colors: C, currentUser } = useApp();
+  const [showAdd, setShowAdd] = useState(false);
+  const [cardNum, setCardNum] = useState('');
+  const [holder, setHolder] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const [cvv, setCvv] = useState('');
+  if (!currentUser) return <GuestGate navigation={navigation} />;
+
+  const luhnCheck = num => {
+    const digits = num.replace(/\D/g, '').split('').reverse().map(Number);
+    const sum = digits.reduce((acc, d, i) => { if (i % 2 !== 0) { d *= 2; if (d > 9) d -= 9; } return acc + d; }, 0);
+    return sum % 10 === 0;
+  };
+  const validateExpiry = exp => {
+    const [m, y] = exp.split('/');
+    if (!m || !y || y.length < 2) return false;
+    const month = parseInt(m), year = parseInt('20' + y);
+    if (month < 1 || month > 12) return false;
+    const now = new Date();
+    return new Date(year, month - 1) >= new Date(now.getFullYear(), now.getMonth());
+  };
+  const getCardBrand = num => {
+    if (num.startsWith('4')) return { label: 'Visa', color: '#1a1f71' };
+    if (num.startsWith('5')) return { label: 'Mastercard', color: '#eb001b' };
+    if (num.startsWith('6')) return { label: 'Mada', color: '#00723f' };
+    return null;
+  };
+  const cardBrand = getCardBrand(cardNum);
+
+  return (
+    <ScrollView style={[s.container, { backgroundColor: C.bg }]}>
+      <View style={{ padding: 14 }}>
+        {paymentMethods.length === 0 && !showAdd && (
+          <View style={[s.settingGroup, { backgroundColor: C.bg2, borderColor: C.border, padding: 24, alignItems: 'center', marginBottom: 14 }]}>
+            <Text style={{ fontSize: 40, marginBottom: 8 }}>💳</Text>
+            <Text style={[s.gateTitle, { color: C.text, fontSize: 15 }]}>{t('noPaymentMethods')}</Text>
+            <Text style={[s.gateSub, { color: C.textMuted, fontSize: 12 }]}>{t('noPaymentMethodsSub')}</Text>
+          </View>
+        )}
+        {paymentMethods.map(m => (
+          <View key={m.id} style={[s.menuItem, { backgroundColor: C.bg2, borderColor: m.isDefault ? C.primary : C.border }]}>
+            <View style={[s.menuIcon, { backgroundColor: 'rgba(124,58,237,0.15)' }]}><Text style={{ fontSize: 20 }}>💳</Text></View>
+            <View style={[s.menuText, isRTL && { marginRight: 12, marginLeft: 0 }]}>
+              <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[s.menuTitle, { color: C.text }, isRTL && s.rtlText]}>{m.last4?.startsWith('4') ? 'Visa' : 'Mastercard'} •••• {m.last4}</Text>
+                {m.isDefault && <View style={{ backgroundColor: `${C.primary}22`, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8 }}><Text style={{ fontSize: 9, color: C.primary2, fontWeight: '800' }}>{t('isDefault')}</Text></View>}
+              </View>
+              <Text style={[s.menuSub, { color: C.textMuted }]}>{m.holder} · {m.expiry}</Text>
+            </View>
+            <View style={{ gap: 6, alignItems: 'flex-end' }}>
+              {!m.isDefault && <TouchableOpacity onPress={() => setDefaultPaymentMethod(m.id)}><Text style={{ fontSize: 10, color: C.accent, fontWeight: '700' }}>✓ {t('makeDefault')}</Text></TouchableOpacity>}
+              <TouchableOpacity onPress={() => removePaymentMethod(m.id)}><Text style={{ fontSize: 10, color: '#f87171', fontWeight: '700' }}>✕</Text></TouchableOpacity>
+            </View>
+          </View>
+        ))}
+        {showAdd ? (
+          <View style={[s.settingGroup, { backgroundColor: C.bg2, borderColor: C.border, padding: 14 }]}>
+            <Text style={[s.inputLabel, { color: C.textMuted }, isRTL && s.rtlText]}>{t('cardNumber')}</Text>
+            <View style={{ position: 'relative' }}>
+              <TextInput style={[s.textInput, { backgroundColor: C.bg3, borderColor: C.border, color: C.text, paddingRight: cardBrand ? 80 : 14 }, isRTL && { textAlign: 'right' }]}
+                placeholder="1234 5678 9012 3456" placeholderTextColor={C.textMuted}
+                value={cardNum.replace(/(.{4})/g, '$1 ').trim()}
+                onChangeText={v => setCardNum(v.replace(/\s/g, '').slice(0, 16))}
+                keyboardType="numeric" maxLength={19} />
+              {cardBrand && (
+                <View style={{ position: 'absolute', right: 10, top: 12, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: cardBrand.color }}>{cardBrand.label}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[s.inputLabel, { color: C.textMuted }, isRTL && s.rtlText]}>{t('cardHolder')}</Text>
+            <TextInput style={[s.textInput, { backgroundColor: C.bg3, borderColor: C.border, color: C.text }, isRTL && { textAlign: 'right' }]}
+              placeholder={t('cardHolder')} placeholderTextColor={C.textMuted} value={holder} onChangeText={setHolder} />
+            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.inputLabel, { color: C.textMuted }, isRTL && s.rtlText]}>{t('expiryDate')}</Text>
+                <TextInput style={[s.textInput, { backgroundColor: C.bg3, borderColor: C.border, color: C.text }, isRTL && { textAlign: 'right' }]}
+                  placeholder="MM/YY" placeholderTextColor={C.textMuted} value={expiry} onChangeText={setExpiry} maxLength={5} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.inputLabel, { color: C.textMuted }, isRTL && s.rtlText]}>{t('cvv')}</Text>
+                <TextInput style={[s.textInput, { backgroundColor: C.bg3, borderColor: C.border, color: C.text }, isRTL && { textAlign: 'right' }]}
+                  placeholder="CVV" placeholderTextColor={C.textMuted} value={cvv} onChangeText={setCvv} keyboardType="numeric" maxLength={4} secureTextEntry />
+              </View>
+            </View>
+            <TouchableOpacity onPress={() => {
+              const cleanNum = cardNum.replace(/\s/g, '');
+              if (cleanNum.length < 16) { Alert.alert(isRTL ? 'خطأ' : 'Error', isRTL ? 'رقم البطاقة 16 رقم' : 'Card number must be 16 digits'); return; }
+              if (!luhnCheck(cleanNum)) { Alert.alert(isRTL ? 'بطاقة غير صالحة' : 'Invalid Card', isRTL ? 'رقم البطاقة غير صحيح' : 'Card number is not valid'); return; }
+              if (!holder.trim()) { Alert.alert(isRTL ? 'خطأ' : 'Error', isRTL ? 'أدخل اسم حامل البطاقة' : 'Enter card holder name'); return; }
+              if (!validateExpiry(expiry)) { Alert.alert(isRTL ? 'تاريخ غير صالح' : 'Invalid Date', isRTL ? 'تاريخ الانتهاء غير صحيح' : 'Expiry date invalid or expired'); return; }
+              if (cvv.length < 3) { Alert.alert(isRTL ? 'خطأ' : 'Error', isRTL ? 'CVV 3 أو 4 أرقام' : 'CVV must be 3-4 digits'); return; }
+              addPaymentMethod({ type: 'card', last4: cleanNum.slice(-4), holder: holder.trim(), expiry, brand: cleanNum.startsWith('4') ? 'visa' : cleanNum.startsWith('5') ? 'mc' : 'mada' });
+              setCardNum(''); setHolder(''); setExpiry(''); setCvv(''); setShowAdd(false);
+              Alert.alert(t('cardAdded'));
+            }}>
+              <LinearGradient colors={['#7c3aed','#a855f7']} style={[s.actionBtn, { marginTop: 4 }]}><Text style={s.actionBtnText}>{t('addCard')}</Text></LinearGradient>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ alignItems: 'center', marginTop: 10 }} onPress={() => setShowAdd(false)}>
+              <Text style={{ color: C.textMuted, fontSize: 13 }}>{t('cancel')}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity onPress={() => setShowAdd(true)}>
+            <LinearGradient colors={['#7c3aed','#a855f7']} style={s.actionBtn}><Text style={s.actionBtnText}>+ {t('addCard')}</Text></LinearGradient>
+          </TouchableOpacity>
+        )}
+      </View>
+      <View style={{ height: 20 }} />
     </ScrollView>
   );
 }

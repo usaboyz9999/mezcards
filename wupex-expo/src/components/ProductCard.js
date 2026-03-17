@@ -1,13 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context/AppContext'
 
-const { width } = Dimensions.get('window');
-const CARD_W = (width - 28 - 16) / 3;
-
-export default function ProductCard({ product, onPress }) {
+export default function ProductCard({ product, onPress, cardWidth }) {
   const { colors: C, t } = useApp();
   const [imgError, setImgError] = useState(false);
   const scale = useRef(new Animated.Value(1)).current;
@@ -15,17 +12,19 @@ export default function ProductCard({ product, onPress }) {
   const onPressIn = () => Animated.spring(scale, { toValue: 0.94, useNativeDriver: true, tension: 200, friction: 10 }).start();
   const onPressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 200, friction: 10 }).start();
 
+  const imgH = cardWidth ? cardWidth * 0.82 : 80;
+
   return (
     <TouchableOpacity
       onPress={onPress}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
       activeOpacity={1}
-      style={{ width: CARD_W }}
+      style={{ width: '100%' }}
     >
       <Animated.View style={[styles.card, { backgroundColor: C.bg2, borderColor: C.border }, { transform: [{ scale }] }]}>
         {/* Image / Gradient Header */}
-        <View style={styles.imgWrap}>
+        <View style={[styles.imgWrap, { height: imgH }]}>
           <LinearGradient colors={product.colors} style={StyleSheet.absoluteFill} />
           {product.image && !imgError && (
             <Image
@@ -67,7 +66,7 @@ export default function ProductCard({ product, onPress }) {
 
 const styles = StyleSheet.create({
   card: { borderRadius: 14, overflow: 'hidden', borderWidth: 1 },
-  imgWrap: { width: '100%', height: CARD_W * 0.82, position: 'relative', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  imgWrap: { width: '100%', position: 'relative', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   img: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
   imgGrad: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 },
   badge: { position: 'absolute', top: 5, right: 5, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2, zIndex: 3 },

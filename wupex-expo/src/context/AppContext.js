@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { Share, Alert } from 'react-native';
-import { DEMO_USERS, INITIAL_ORDERS, INITIAL_TRANSACTIONS, DARK_COLORS, LIGHT_COLORS, CURRENCIES } from '../data';
+import { DEMO_USERS, INITIAL_ORDERS, INITIAL_TRANSACTIONS, DARK_COLORS, LIGHT_COLORS, CURRENCIES } from '../data/index';
 
 const AppContext = createContext();
 
@@ -118,9 +118,9 @@ const TR = {
     couponDiscount: 'خصم الكوبون', removeCoupon: 'إزالة',
     availableCoupons: 'الكوبونات المتاحة',
     // ─ Loyalty
-    loyaltyPoints: 'نقاط الولاء', myPoints: 'نقاطي', usePoints: 'استخدام النقاط',
-    pointsBalance: 'رصيد النقاط', pointsHistory: 'سجل النقاط',
-    pointsInfo: '100 نقطة = $1 رصيد', noPointsYet: 'لا توجد نقاط بعد',
+    loyaltyPoints: 'نقاطي', myPoints: 'نقاطي', usePoints: 'استخدام النقاط',
+    pointsBalance: 'رصيد نقاطي', pointsHistory: 'سجل النقاط',
+    pointsInfo: '1000 نقطة = $1 رصيد', noPointsYet: 'لا توجد نقاط بعد',
     pointsEarned: 'نقاط مكتسبة', youEarned: 'اكتسبت', pointsFromOrder: 'نقطة من طلبك',
     pointsDiscount: 'خصم النقاط', redeemPoints: 'استبدال',
     pointsUsedInOrder: 'نقاط مستخدمة في الطلب',
@@ -139,7 +139,7 @@ const TR = {
     wishlistEmpty: 'المفضلة فارغة', wishlistEmptySub: 'أضف منتجاتك المفضلة لتجدها هنا',
     viewWishlist: 'عرض المفضلة',
     // ─ Referral
-    referral: 'برنامج الإحالة', myReferrals: 'إحالاتي',
+    referral: 'الإحالة', myReferrals: 'إحالاتي',
     referralCode: 'كود الإحالة', copyCode: 'نسخ',
     codeCopied: '✓ تم النسخ', referralEarnings: 'الأرباح',
     referralInfo: 'اكسب 50 نقطة عن كل صديق تدعوه للتسجيل',
@@ -249,9 +249,9 @@ const TR = {
     couponDiscount: 'Coupon discount', removeCoupon: 'Remove',
     availableCoupons: 'Available Coupons',
     // ─ Loyalty
-    loyaltyPoints: 'Loyalty Points', myPoints: 'My Points', usePoints: 'Use Points',
-    pointsBalance: 'Points Balance', pointsHistory: 'Points History',
-    pointsInfo: '100 points = $1 credit', noPointsYet: 'No points yet',
+    loyaltyPoints: 'My Points', myPoints: 'My Points', usePoints: 'Use Points',
+    pointsBalance: 'My Points Balance', pointsHistory: 'Points History',
+    pointsInfo: '1000 points = $1 credit', noPointsYet: 'No points yet',
     pointsEarned: 'Points earned', youEarned: 'You earned', pointsFromOrder: 'points from your order',
     pointsDiscount: 'Points discount', redeemPoints: 'Redeem',
     pointsUsedInOrder: 'Points used in this order',
@@ -270,7 +270,7 @@ const TR = {
     wishlistEmpty: 'Wishlist is Empty', wishlistEmptySub: 'Add your favorite products to find them here',
     viewWishlist: 'View Wishlist',
     // ─ Referral
-    referral: 'Referral Program', myReferrals: 'My Referrals',
+    referral: 'Referral', myReferrals: 'My Referrals',
     referralCode: 'Referral Code', copyCode: 'Copy',
     codeCopied: '✓ Copied!', referralEarnings: 'Earnings',
     referralInfo: 'Earn 50 points for every friend you invite',
@@ -337,7 +337,7 @@ export function AppProvider({ children }) {
   });
   const [reviews, setReviews] = useState(INITIAL_REVIEWS);
   const [userReferrals, setUserReferrals] = useState({
-    [ADMIN_ID]: { code: 'ADMIN1234', referred: [], totalEarnings: 0 },
+    [ADMIN_ID]: { code: 'ADM' + Math.floor(10000 + Math.random() * 90000), referred: [], totalEarnings: 0, codeChanged: false },
   });
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -484,7 +484,7 @@ export function AppProvider({ children }) {
   // ─── Loyalty Points ───────────────────────────────────────────────────────
   const earnPoints = (amount, description) => {
     if (!currentUser) return;
-    const pointsToAdd = Math.floor(amount * 10); // 10 points per $1
+    const pointsToAdd = Math.floor(amount * 0.1); // 10 نقاط لكل $100
     const uid = currentUser.id;
     setUserPoints(prev => ({
       ...prev,
@@ -504,10 +504,10 @@ export function AppProvider({ children }) {
     const uid = currentUser.id;
     const available = userPoints[uid]?.balance || 0;
     const toUse = Math.min(pointsToUse, available);
-    const discount = toUse / 100; // 100 points = $1
-    const maxDiscount = subtotal * 0.5; // max 50% of order
+    const discount = toUse / 1000; // 1000 نقطة = $1
+    const maxDiscount = subtotal * 0.5;
     const finalDiscount = Math.min(discount, maxDiscount);
-    const finalPoints = Math.round(finalDiscount * 100);
+    const finalPoints = Math.round(finalDiscount * 1000);
     if (finalPoints <= 0) return 0;
 
     setUserPoints(prev => ({
@@ -554,47 +554,57 @@ export function AppProvider({ children }) {
   };
 
   // ─── Support Tickets ──────────────────────────────────────────────────────
+
   const createTicket = (subject, category, message) => {
     if (!currentUser) return { success: false };
+    const ticketId = `TKT-${String(Date.now()).slice(-5)}`;
     const ticket = {
-      id: `TKT-${String(Date.now()).slice(-5)}`,
+      id: ticketId,
       subject, category, message, status: 'open',
-      createdAt: now(), replies: [],
+      createdAt: now(), replies: [], autoReplySent: false,
     };
     const uid = currentUser.id;
     setUserTickets(prev => ({ ...prev, [uid]: [ticket, ...(prev[uid] || [])] }));
 
-    // Simulate auto-reply
+    // الرد التلقائي مرة واحدة فقط — نتحقق من autoReplySent في الـ state
     setTimeout(() => {
-      const autoReply = {
-        from: 'Support',
-        message: language === 'ar'
-          ? 'شكراً لتواصلك معنا. سيقوم فريقنا بمراجعة تذكرتك والرد في أقرب وقت.'
-          : 'Thank you for contacting us. Our team will review your ticket and respond shortly.',
-        date: now(),
-      };
-      setUserTickets(prev => ({
-        ...prev,
-        [uid]: (prev[uid] || []).map(tk =>
-          tk.id === ticket.id
-            ? { ...tk, status: 'in-progress', replies: [...tk.replies, autoReply] }
-            : tk
-        ),
-      }));
+      setUserTickets(prev => {
+        const userTks = prev[uid] || [];
+        const tk = userTks.find(t => t.id === ticketId);
+        // لا ترسل إذا سبق إرسال الرد أو التذكرة مغلقة
+        if (!tk || tk.autoReplySent || tk.status === 'closed') return prev;
+        const autoReply = {
+          from: 'Support',
+          message: language === 'ar'
+            ? 'شكراً لتواصلك معنا. سيقوم فريقنا بمراجعة تذكرتك والرد في أقرب وقت.'
+            : 'Thank you for contacting us. Our team will review your ticket and respond shortly.',
+          date: now(),
+        };
+        return {
+          ...prev,
+          [uid]: userTks.map(t =>
+            t.id === ticketId
+              ? { ...t, status: 'in-progress', replies: [...t.replies, autoReply], autoReplySent: true }
+              : t
+          ),
+        };
+      });
     }, 1500);
 
     return { success: true, ticket };
   };
 
-  const addTicketReply = (ticketId, message) => {
+  const addTicketReply = (ticketId, replyMsg) => {
     if (!currentUser) return;
     const uid = currentUser.id;
+    const ticket = (userTickets[uid] || []).find(tk => tk.id === ticketId);
+    // لا تُضف رداً على تذكرة مغلقة
+    if (!ticket || ticket.status === 'closed') return;
+    const reply = { from: currentUser.name, message: replyMsg, date: now() };
     setUserTickets(prev => ({
       ...prev,
       [uid]: (prev[uid] || []).map(tk =>
-        tk.id === ticketId
-          ? { ...tk, replies: [...tk.replies, { from: currentUser.name, message, date: now() }] }
-          : tk
+        tk.id === ticketId ? { ...tk, replies: [...tk.replies, reply] } : tk
       ),
     }));
   };
@@ -608,6 +618,22 @@ export function AppProvider({ children }) {
         tk.id === ticketId ? { ...tk, status: 'closed' } : tk
       ),
     }));
+  };
+
+  const changeReferralCode = (newCode) => {
+    if (!currentUser) return { success: false };
+    const uid = currentUser.id;
+    const current = userReferrals[uid];
+    if (current?.codeChanged) return { success: false, error: 'already_changed' };
+    const clean = newCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (clean.length < 4 || clean.length > 12) return { success: false, error: 'invalid_length' };
+    const exists = Object.values(userReferrals).some(r => r.code === clean);
+    if (exists) return { success: false, error: 'exists' };
+    setUserReferrals(prev => ({
+      ...prev,
+      [uid]: { ...prev[uid], code: clean, codeChanged: true },
+    }));
+    return { success: true };
   };
 
   // ─── Payment Methods ──────────────────────────────────────────────────────
@@ -688,8 +714,7 @@ export function AppProvider({ children }) {
   const removeFromCart = (productId, pkgIndex) => setCart(prev => prev.filter(i => !(i.productId === productId && i.pkgIndex === pkgIndex)));
   const clearCart = () => setCart([]);
 
-  // ─── Checkout ────────────────────────────────────────────────────────────
-  const checkout = ({ couponCode, usePointsAmount = 0, paymentMethodId = null } = {}) => {
+  const checkout = ({ couponCode, usePointsAmount = 0, paymentMethodId = null, paymentMode = 'wallet' } = {}) => {
     if (!currentUser) return { success: false, error: t('signInRequired') };
     const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
     let couponDiscount = 0;
@@ -700,26 +725,52 @@ export function AppProvider({ children }) {
       if (cv.valid) { couponDiscount = cv.discount; couponInfo = cv.coupon; }
     }
 
+    // 1000 نقطة = $1
     let pointsDiscount = 0;
+    let usedPoints = 0;
     if (usePointsAmount > 0) {
-      const maxPointsDiscount = (subtotal - couponDiscount) * 0.5;
-      pointsDiscount = Math.min(usePointsAmount / 100, maxPointsDiscount);
+      const available = userPoints[currentUser.id]?.balance || 0;
+      const pointsToUse = Math.min(usePointsAmount, available);
+      const maxDiscount = (subtotal - couponDiscount) * 0.5;
+      const rawDiscount = pointsToUse / 1000;
+      pointsDiscount = Math.min(rawDiscount, maxDiscount);
+      usedPoints = Math.round(pointsDiscount * 1000);
     }
 
     const afterDiscount = subtotal - couponDiscount - pointsDiscount;
     const vat = afterDiscount * 0.1;
-    const total = afterDiscount + vat;
+    const total = Math.max(0, afterDiscount + vat);
 
-    if (currentUser.wallet < total) return { success: false, error: t('insufficientMsg') };
+    if (total > 0 && currentUser.wallet < total) return { success: false, error: t('insufficientMsg') };
 
     const dateStr = now();
     const invId = `#INV-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000 + 1000))}`;
     const uid = currentUser.id;
 
+    // تحديد وصف طريقة الدفع لحفظها في الطلب
+    const buildPaymentLabel = () => {
+      const isAr = language === 'ar';
+      if (usedPoints > 0 && total <= 0.01) return { ar: `نقاطي (${usedPoints} نقطة)`, en: `My Points (${usedPoints} pts)` };
+      if (usedPoints > 0 && total > 0.01) {
+        const walletLabel = paymentMode === 'wallet' ? (isAr ? 'محفظة' : 'Wallet') : `${isAr ? 'بطاقة' : 'Card'} ****${paymentMethodId || ''}`;
+        return { ar: `نقاطي + ${walletLabel}`, en: `Points + ${walletLabel}` };
+      }
+      if (paymentMode === 'wallet') return { ar: 'المحفظة الإلكترونية', en: 'Digital Wallet' };
+      if (paymentMode && paymentMode.startsWith('saved-')) {
+        const cardId = paymentMode.replace('saved-', '');
+        const card = userPaymentMethods[uid]?.find(m => m.id === cardId);
+        const brand = card?.last4?.startsWith('4') ? 'Visa' : 'Mastercard';
+        return { ar: `${brand} •••• ${card?.last4 || ''}`, en: `${brand} •••• ${card?.last4 || ''}` };
+      }
+      return { ar: 'بطاقة بنكية', en: 'Credit Card' };
+    };
+    const paymentLabel = buildPaymentLabel();
+
     const newOrders = cart.map(item => ({
       id: `#ORD-${Math.floor(Math.random() * 9000 + 1000)}`,
       name: `${item.name} (${item.pkg})`, customer: currentUser.name,
       date: dateStr, amount: `$${(item.price * item.qty).toFixed(2)}`, status: 'completed',
+      paymentLabel, usedPoints, pointsDiscount,
     }));
 
     const newTrans = cart.map(item => ({
@@ -732,19 +783,18 @@ export function AppProvider({ children }) {
       items: [
         ...cart.map(i => ({ name: `${i.name} ${i.pkg} ×${i.qty}`, amount: `$${(i.price * i.qty).toFixed(2)}` })),
         ...(couponDiscount > 0 ? [{ name: `Coupon: ${couponInfo?.code}`, amount: `-$${couponDiscount.toFixed(2)}` }] : []),
-        ...(pointsDiscount > 0 ? [{ name: 'Points discount', amount: `-$${pointsDiscount.toFixed(2)}` }] : []),
+        ...(pointsDiscount > 0 ? [{ name: language === 'ar' ? 'خصم نقاطي' : 'Points discount', amount: `-$${pointsDiscount.toFixed(2)}` }] : []),
       ],
     };
 
-    // Deduct points if used
-    if (usePointsAmount > 0 && pointsDiscount > 0) {
-      const usedPoints = Math.round(pointsDiscount * 100);
+    // خصم النقاط
+    if (usedPoints > 0) {
       setUserPoints(prev => ({
         ...prev,
         [uid]: {
           balance: (prev[uid]?.balance || 0) - usedPoints,
           history: [
-            { id: `pd-${Date.now()}`, type: 'redeem', amount: -usedPoints, description: { en: 'Redeemed in order', ar: 'استبدال في طلب' }, date: dateStr },
+            { id: `pd-${Date.now()}`, type: 'redeem', amount: -usedPoints, description: { en: `Points used in order ${newOrders[0]?.id}`, ar: `نقاط مستخدمة في ${newOrders[0]?.id}` }, date: dateStr },
             ...(prev[uid]?.history || []),
           ],
         },
@@ -754,21 +804,25 @@ export function AppProvider({ children }) {
     setUserOrders(prev => ({ ...prev, [uid]: [...newOrders, ...(prev[uid] || [])] }));
     setUserTransactions(prev => ({ ...prev, [uid]: [...newTrans, ...(prev[uid] || [])] }));
     setUserInvoices(prev => ({ ...prev, [uid]: [newInvoice, ...(prev[uid] || [])] }));
-    setCurrentUser(prev => ({ ...prev, wallet: prev.wallet - total, spent: prev.spent + total }));
-    setUsers(prev => prev.map(u => u.id === uid ? { ...u, wallet: u.wallet - total, spent: u.spent + total } : u));
+    if (total > 0) {
+      setCurrentUser(prev => ({ ...prev, wallet: prev.wallet - total, spent: prev.spent + total }));
+      setUsers(prev => prev.map(u => u.id === uid ? { ...u, wallet: u.wallet - total, spent: u.spent + total } : u));
+    }
 
-    // Earn points from order (10 per $1)
-    const earned = Math.floor(subtotal * 10);
-    setUserPoints(prev => ({
-      ...prev,
-      [uid]: {
-        balance: (prev[uid]?.balance || 0) + earned,
-        history: [
-          { id: `pe-${Date.now()}`, type: 'earn', amount: earned, description: { en: `Order ${newOrders[0]?.id}`, ar: `طلب ${newOrders[0]?.id}` }, date: dateStr },
-          ...(prev[uid]?.history || []),
-        ],
-      },
-    }));
+    // كسب النقاط: فقط من المبلغ المدفوع (لا من النقاط)
+    const earned = usedPoints > 0 && total <= 0.01 ? 0 : Math.floor(total * 0.1);
+    if (earned > 0) {
+      setUserPoints(prev => ({
+        ...prev,
+        [uid]: {
+          balance: (prev[uid]?.balance || 0) + earned,
+          history: [
+            { id: `pe-${Date.now()}`, type: 'earn', amount: earned, description: { en: `Order ${newOrders[0]?.id}`, ar: `طلب ${newOrders[0]?.id}` }, date: dateStr },
+            ...(prev[uid]?.history || []),
+          ],
+        },
+      }));
+    }
 
     setCart([]);
     return { success: true, total, earned };
@@ -806,7 +860,7 @@ export function AppProvider({ children }) {
       reviews, addReview, getProductReviews, getProductRating, markHelpful,
       tickets, createTicket, addTicketReply, closeTicket, TICKET_CATEGORIES,
       paymentMethods, addPaymentMethod, removePaymentMethod, setDefaultPaymentMethod,
-      referralData, shareReferralCode,
+      referralData, shareReferralCode, changeReferralCode,
       transferFunds,
       addToCart, removeFromCart, clearCart, checkout, addFunds,
     }}>

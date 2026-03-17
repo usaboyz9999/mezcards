@@ -1,16 +1,13 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput,
-  ScrollView, TouchableOpacity, Dimensions, Animated,
+  ScrollView, TouchableOpacity, useWindowDimensions, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { PRODUCTS, CATEGORIES } from '../data';
+import { PRODUCTS, CATEGORIES } from '../data/index.js';
 import ProductCard from '../components/ProductCard';
-import { useApp } from '../context/AppContext';
-
-const { width } = Dimensions.get('window');
-const CARD_W = (width - 28 - 16) / 3;
+import { useApp } from '../context/AppContext'
 
 const CATEGORY_ICONS = {
   'All':           'apps',
@@ -37,8 +34,18 @@ const SORT_OPTIONS = [
   { key: 'name', label: { en: 'Name', ar: 'الاسم' } },
 ];
 
+const PADDING = 14;
+const GAP = 8;
+const MIN_CARD_W = 110; // أدنى عرض للبطاقة
+
 export default function ProductsScreen({ navigation, route }) {
   const { t, isRTL, language, colors: C } = useApp();
+  const { width } = useWindowDimensions();
+
+  // عدد الأعمدة ديناميكي: يزيد عند الأفقي أو الشاشات الكبيرة
+  const NUM_COLS = Math.floor((width - PADDING * 2 + GAP) / (MIN_CARD_W + GAP));
+  const CARD_W = (width - PADDING * 2 - GAP * (NUM_COLS - 1)) / NUM_COLS;
+
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortKey, setSortKey] = useState('default');
@@ -68,26 +75,35 @@ export default function ProductsScreen({ navigation, route }) {
     return list;
   }, [query, activeCategory, sortKey]);
 
-  const rows = useMemo(() => {
-    const r = [];
-    for (let i = 0; i < filtered.length; i += 3) r.push(i);
-    return r;
-  }, [filtered]);
-
-  const renderRow = ({ item: startIdx }) => {
-    const row = [];
-    for (let i = 0; i < 3; i++) {
-      const p = filtered[startIdx + i];
-      row.push(
-        p ? (
-          <ProductCard key={p.id} product={p} onPress={() => navigation.navigate('ProductDetail', { product: p })} />
-        ) : (
-          <View key={`empty-${i}`} style={{ width: CARD_W }} />
-        )
-      );
-    }
-    return <View style={styles.row}>{row}</View>;
+  const renderItem = ({ item: p, index }) => {
+    const col = index % NUM_COLS;
+    const isPlaceholder = p.__placeholder;
+    return (
+      <View style={{
+        width: CARD_W,
+        marginLeft: col === 0 ? 0 : GAP,
+        marginBottom: GAP,
+        opacity: isPlaceholder ? 0 : 1,
+      }}>
+        {!isPlaceholder && (
+          <ProductCard
+            product={p}
+            cardWidth={CARD_W}
+            onPress={() => navigation.navigate('ProductDetail', { product: p })}
+          />
+        )}
+      </View>
+    );
   };
+
+  // ملء الصف الأخير بمنتجات من أول القائمة لتجنب المساحة الفارغة
+  const paddedData = useMemo(() => {
+    const remainder = filtered.length % NUM_COLS;
+    if (remainder === 0 || filtered.length === 0) return filtered;
+    const needed = NUM_COLS - remainder;
+    const fillers = filtered.slice(0, needed).map(p => ({ ...p, id: `filler-${p.id}`, __placeholder: false }));
+    return [...filtered, ...fillers];
+  }, [filtered, NUM_COLS]);
 
   const onSearchFocus = () => Animated.spring(searchAnim, { toValue: 1.01, useNativeDriver: true }).start();
   const onSearchBlur = () => Animated.spring(searchAnim, { toValue: 1, useNativeDriver: true }).start();
@@ -214,10 +230,13 @@ export default function ProductsScreen({ navigation, route }) {
         </View>
       ) : (
         <FlatList
-          data={rows}
-          keyExtractor={i => String(i)}
-          renderItem={renderRow}
-          contentContainerStyle={styles.grid}
+          key={`grid-${width}-${NUM_COLS}`}
+          data={paddedData}
+          keyExtractor={p => String(p.id)}
+          renderItem={renderItem}
+          numColumns={NUM_COLS}
+          contentContainerStyle={{ paddingHorizontal: PADDING, paddingTop: 2, paddingBottom: 24 }}
+          columnWrapperStyle={NUM_COLS > 1 ? { flexDirection: 'row', alignItems: 'flex-start' } : undefined}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -247,8 +266,6 @@ const styles = StyleSheet.create({
   resultsText: { fontSize: 12 },
   clearFilterBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1 },
   clearFilterText: { fontSize: 11, fontWeight: '700' },
-  grid: { paddingHorizontal: 14, paddingTop: 2, paddingBottom: 24 },
-  row: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 10 },
   emptyTitle: { fontSize: 17, fontWeight: '800' },
   emptySub: { fontSize: 13 },

@@ -1,14 +1,13 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
+import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { AppProvider, useApp } from './src/context/AppContext';
-
 import SplashScreen        from './src/screens/SplashScreen';
 import HomeScreen          from './src/screens/HomeScreen';
 import ProductsScreen      from './src/screens/ProductsScreen';
@@ -17,6 +16,8 @@ import CartScreen          from './src/screens/CartScreen';
 import {
   OrdersScreen, WalletScreen, AccountScreen,
   TransactionsScreen, InvoiceScreen, SettingsScreen,
+  WishlistScreen, PointsScreen, ReferralScreen,
+  SupportScreen, PaymentMethodsScreen,
 } from './src/screens/OtherScreens';
 
 const Tab   = createBottomTabNavigator();
@@ -31,55 +32,113 @@ const TAB_CONFIG = {
   Account:  { active: 'person-circle',   inactive: 'person-circle-outline' },
 };
 
-// ─── Logo Component ───────────────────────────────────────────────────────────
-function MezLogo({ size = 32 }) {
+// ─── Logo Component (Larger & Professional) ───────────────────────────────────
+function MezLogo({ size = 40 }) {
   return (
     <LinearGradient
       colors={['#a855f7', '#7c3aed', '#5b21b6']}
       style={{
-        width: size, height: size, borderRadius: size * 0.28,
-        alignItems: 'center', justifyContent: 'center',
-        shadowColor: '#7c3aed', shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.5, shadowRadius: 8, elevation: 8,
+        width: size,
+        height: size,
+        borderRadius: size * 0.28,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#7c3aed',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.7,
+        shadowRadius: 12,
+        elevation: 12,
       }}
-      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
     >
-      <Text style={{
-        fontSize: size * 0.52, fontWeight: '900', color: '#fff',
-        letterSpacing: -1, includeFontPadding: false,
-      }}>M</Text>
+      <Text
+        style={{
+          fontSize: size * 0.65,
+          fontWeight: '900',
+          color: '#fff',
+          letterSpacing: -2,
+          includeFontPadding: false,
+          textShadowColor: 'rgba(124, 58, 237, 0.9)',
+          textShadowOffset: { width: 0, height: 3 },
+          textShadowRadius: 10,
+        }}
+      >
+        M
+      </Text>
     </LinearGradient>
   );
 }
 
-// ─── Custom Header Title ──────────────────────────────────────────────────────
-function HeaderTitle({ title }) {
-  const { isRTL, colors: C } = useApp();
+// ─── Custom Header Title (Logo RIGHT, Name LEFT) ──────────────────────────────
+// ─── Header Helpers ───────────────────────────────────────────────────────────
+function HeaderLogoLeft() {
+  return <View style={{ paddingLeft: 12 }}><MezLogo size={40} /></View>;
+}
+
+function HeaderLogoRight() {
+  return <View style={{ paddingRight: 12 }}><MezLogo size={40} /></View>;
+}
+
+function HeaderTitleLeft({ title }) {
+  const { colors: C } = useApp();
   return (
-    <View style={{
-      flexDirection: isRTL ? 'row-reverse' : 'row',
-      alignItems: 'center', gap: 9,
+    <Text style={{
+      fontSize: 22, fontWeight: '900', color: C.text,
+      letterSpacing: -0.8, includeFontPadding: false,
+      textTransform: 'uppercase', paddingLeft: 12,
     }}>
-      {!isRTL && (
-        <Text style={{
-          fontSize: 18, fontWeight: '900', color: C.text,
-          letterSpacing: -0.5,
-        }}>
-          {title}
-        </Text>
-      )}
-      <MezLogo size={32} />
-      {isRTL && (
-        <Text style={{
-          fontSize: 18, fontWeight: '900', color: C.text,
-          letterSpacing: -0.5,
-        }}>
-          {title}
-        </Text>
-      )}
-    </View>
+      {title}
+    </Text>
   );
 }
+
+function HeaderTitleRight({ title }) {
+  const { colors: C } = useApp();
+  return (
+    <Text style={{
+      fontSize: 22, fontWeight: '900', color: C.text,
+      letterSpacing: -0.8, includeFontPadding: false,
+      textTransform: 'uppercase', paddingRight: 12,
+    }}>
+      {title}
+    </Text>
+  );
+}
+
+// إنشاء options الهيدر حسب اللغة
+// عربي:    شعار يسار (headerLeft) + اسم يمين (headerRight)
+// إنجليزي: اسم يسار (headerLeft) + شعار يمين (headerRight)
+function makeHeaderOpts(title, isRTL) {
+  if (isRTL) {
+    return {
+      headerTitle: () => null,
+      headerLeft:  () => <HeaderLogoLeft />,
+      headerRight: () => <HeaderTitleRight title={title} />,
+    };
+  }
+  return {
+    headerTitle: () => null,
+    headerLeft:  () => <HeaderTitleLeft title={title} />,
+    headerRight: () => <HeaderLogoRight />,
+  };
+}
+
+// ─── انتقال سلس مخصص ─────────────────────────────────────────────────────────
+const smoothTransition = {
+  gestureEnabled: true,
+  transitionSpec: {
+    open:  { animation: 'timing', config: { duration: 220, easing: Easing.out(Easing.ease) } },
+    close: { animation: 'timing', config: { duration: 180, easing: Easing.in(Easing.ease) } },
+  },
+  cardStyleInterpolator: ({ current }) => ({
+    cardStyle: {
+      opacity: current.progress.interpolate({
+        inputRange: [0, 1], outputRange: [0, 1], extrapolate: 'clamp',
+      }),
+    },
+  }),
+};
 
 // ─── Stack Options ────────────────────────────────────────────────────────────
 function useStackOpts() {
@@ -89,66 +148,87 @@ function useStackOpts() {
       backgroundColor: C.bg,
       borderBottomColor: C.border,
       borderBottomWidth: 1,
-      elevation: 0, shadowOpacity: 0,
+      elevation: 0,
+      shadowOpacity: 0,
     },
     headerTintColor: C.accent,
-    headerTitleStyle: { color: C.text, fontWeight: '800', fontSize: 16 },
-    headerTitleAlign: 'center',
+    headerTitleStyle: { color: C.text, fontWeight: '900', fontSize: 18 },
     cardStyle: { backgroundColor: C.bg },
-    cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+    ...smoothTransition,
   };
 }
 
 // ─── Stacks ───────────────────────────────────────────────────────────────────
 function HomeStack() {
   const opts = useStackOpts();
+  const { isRTL } = useApp();
   return (
     <Stack.Navigator screenOptions={opts}>
-      <Stack.Screen name="Home" component={HomeScreen}
-        options={{ headerTitle: () => <HeaderTitle title="Mez-Cards" /> }} />
-      <Stack.Screen name="ProductDetail" component={ProductDetailScreen}
-        options={({ route }) => ({ title: route.params.product.name })} />
+      <Stack.Screen
+        name="Home"
+        component={HomeScreen}
+        options={makeHeaderOpts('Mez-Cards', isRTL)}
+      />
+      <Stack.Screen
+        name="ProductDetail"
+        component={ProductDetailScreen}
+        options={({ route }) => ({ title: route.params.product.name })}
+      />
     </Stack.Navigator>
   );
 }
 
 function ProductsStack() {
-  const { t } = useApp();
+  const { t, isRTL } = useApp();
   const opts = useStackOpts();
   return (
     <Stack.Navigator screenOptions={opts}>
-      <Stack.Screen name="Products" component={ProductsScreen}
-        options={{ headerTitle: () => <HeaderTitle title={t('products')} /> }} />
-      <Stack.Screen name="ProductDetail" component={ProductDetailScreen}
-        options={({ route }) => ({ title: route.params.product.name })} />
+      <Stack.Screen
+        name="Products"
+        component={ProductsScreen}
+        options={makeHeaderOpts(t('products'), isRTL)}
+      />
+      <Stack.Screen
+        name="ProductDetail"
+        component={ProductDetailScreen}
+        options={({ route }) => ({ title: route.params.product.name })}
+      />
     </Stack.Navigator>
   );
 }
 
 function AccountStack() {
-  const { t } = useApp();
+  const { t, isRTL } = useApp();
   const opts = useStackOpts();
   return (
     <Stack.Navigator screenOptions={opts}>
-      <Stack.Screen name="AccountMain" component={AccountScreen}
-        options={{ headerTitle: () => <HeaderTitle title={t('myAccount')} /> }} />
-      <Stack.Screen name="Transactions" component={TransactionsScreen}
-        options={{ title: t('transactions') }} />
-      <Stack.Screen name="Invoice" component={InvoiceScreen}
-        options={{ title: t('invoice') }} />
-      <Stack.Screen name="Settings" component={SettingsScreen}
-        options={{ title: t('settings') }} />
+      <Stack.Screen
+        name="AccountMain"
+        component={AccountScreen}
+        options={makeHeaderOpts(t('myAccount'), isRTL)}
+      />
+      <Stack.Screen name="Transactions"    component={TransactionsScreen}    options={{ title: t('transactions')    }} />
+      <Stack.Screen name="Invoice"         component={InvoiceScreen}         options={{ title: t('invoice')         }} />
+      <Stack.Screen name="Settings"        component={SettingsScreen}        options={{ title: t('settings')        }} />
+      <Stack.Screen name="Wishlist"        component={WishlistScreen}        options={{ title: t('myWishlist')      }} />
+      <Stack.Screen name="Points"          component={PointsScreen}          options={{ title: t('loyaltyPoints')   }} />
+      <Stack.Screen name="Referral"        component={ReferralScreen}        options={{ title: t('referral')        }} />
+      <Stack.Screen name="Support"         component={SupportScreen}         options={{ title: t('support')         }} />
+      <Stack.Screen name="PaymentMethods"  component={PaymentMethodsScreen}  options={{ title: t('paymentMethods')  }} />
     </Stack.Navigator>
   );
 }
 
 function CartStack() {
-  const { t } = useApp();
+  const { t, isRTL } = useApp();
   const opts = useStackOpts();
   return (
     <Stack.Navigator screenOptions={opts}>
-      <Stack.Screen name="Cart" component={CartScreen}
-        options={{ headerTitle: () => <HeaderTitle title={t('myCart')} /> }} />
+      <Stack.Screen
+        name="Cart"
+        component={CartScreen}
+        options={makeHeaderOpts(t('myCart'), isRTL)}
+      />
     </Stack.Navigator>
   );
 }
@@ -179,9 +259,6 @@ function AnimatedTabIcon({ routeName, focused, cartCount, color }) {
   return (
     <View style={{ alignItems: 'center', justifyContent: 'center' }}>
       <Animated.View style={{ transform: [{ scale }, { translateY }] }}>
-        {focused && (
-          <View style={[styles.tabActiveGlow, { backgroundColor: color + '22' }]} />
-        )}
         <Ionicons name={iconName || 'ellipse-outline'} size={24} color={color} />
       </Animated.View>
       {routeName === 'Cart' && cartCount > 0 && (
@@ -233,18 +310,34 @@ function MainTabs() {
         color={color}
       />
     ),
+    lazy: true,
+    animationEnabled: true,
+    tabBarHideOnKeyboard: true,
   });
 
   const makeHeaderOpts = (titleKey) => ({
     headerShown: true,
     headerStyle: {
-      backgroundColor: C.bg, elevation: 0, shadowOpacity: 0,
-      borderBottomColor: C.border, borderBottomWidth: 1,
+      backgroundColor: C.bg,
+      elevation: 0,
+      shadowOpacity: 0,
+      borderBottomColor: C.border,
+      borderBottomWidth: 1,
     },
     headerTintColor: C.text,
-    headerTitleStyle: { fontWeight: '800' },
-    headerTitleAlign: 'center',
-    headerTitle: () => <HeaderTitle title={t(titleKey)} />,
+    headerTitleStyle: { fontWeight: '900' },
+    ...( isRTL
+      ? {
+          headerTitle:  () => null,
+          headerLeft:   () => <HeaderLogoLeft />,
+          headerRight:  () => <HeaderTitleRight title={t(titleKey)} />,
+        }
+      : {
+          headerTitle:  () => null,
+          headerLeft:   () => <HeaderTitleLeft title={t(titleKey)} />,
+          headerRight:  () => <HeaderLogoRight />,
+        }
+    ),
   });
 
   if (isRTL) {
@@ -309,14 +402,26 @@ export default function App() {
 const styles = StyleSheet.create({
   tabLabel: { fontSize: 9.5, fontWeight: '700', marginTop: 1 },
   tabActiveGlow: {
-    position: 'absolute', width: 44, height: 44,
-    borderRadius: 22, top: -10, left: -10,
+    position: 'absolute',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    top: -10,
+    left: -10,
   },
   cartBadge: {
-    position: 'absolute', top: -6, right: -10,
-    backgroundColor: '#ef4444', borderRadius: 9,
-    minWidth: 17, height: 17, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: '#0e0c22', paddingHorizontal: 2,
+    position: 'absolute',
+    top: -6,
+    right: -10,
+    backgroundColor: '#ef4444',
+    borderRadius: 9,
+    minWidth: 17,
+    height: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#0e0c22',
+    paddingHorizontal: 2,
   },
   cartBadgeText: { fontSize: 9, fontWeight: '900', color: '#fff' },
 });
