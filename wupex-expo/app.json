@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0d0b1e",
-    "owner": "heyeb19085",
+    "owner": "jewepi6823",
     "splash": {
       "image": "./assets/splash-icon.png",
       "backgroundColor": "#0d0b1e",
@@ -27,7 +27,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "310205d4-17c1-40c5-b6ca-c18524e0a719"
+        "projectId": "f7959389-526c-498c-8f02-988dc90005f3"
       }
     }
   }
