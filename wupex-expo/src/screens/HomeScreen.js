@@ -33,7 +33,7 @@ const PROMO_BANNERS = [
 function MarqueeBanner() {
   const { isRTL, language } = useApp();
   const translateX = useRef(new Animated.Value(0)).current;
-  const TEXT = '⚡ Mez-Cards   ✦   Gift Cards   ✦   Gaming   ✦   Streaming   ✦   VPN   ✦   Education   ✦   Software   ✦   Mobile   ✦   ';
+  const TEXT = '⚡ [جميع طلباتك في مكان واحد ✦ متجر منافس ✦ أسعارنا رخصية ✦ شراء في اي وقت ✦ إستلام فوري ✦ شحن مجاني] ✦   ';
   const TW = TEXT.length * 8.5;
 
   useEffect(() => {
