@@ -172,29 +172,26 @@ export function WalletScreen({ navigation }) {
 
   const handleTopup = () => {
     const amt = parseFloat(amount);
-    if (!amt || amt <= 0) { Alert.alert(t('invalidAmount'), t('enterValidAmount')); return; }
+    if (!amt || amt <= 0) { showModal({ type:'error', title: t('invalidAmount'), message: t('enterValidAmount') }); return; }
     addFunds(amount);
     setAmount('');
     setActiveTab('wallet');
-    Alert.alert(t('successTopup'), `$${amt.toFixed(2)}`);
+    showModal({ type:'success', icon:'points', title: t('successTopup'), message: isRTL ? `تم إضافة $${amt.toFixed(2)} لمحفظتك` : `$${amt.toFixed(2)} added to your wallet.` });
   };
 
   const handleTransfer = () => {
     if (!transferTarget.trim() || !transferAmt) {
-      Alert.alert(isRTL ? 'خطأ' : 'Error', isRTL ? 'املأ جميع الحقول' : 'Fill all fields');
+      showModal({ type:'error', title: isRTL ? 'خطأ' : 'Error', message: isRTL ? 'يرجى ملء جميع الحقول' : 'Please fill all fields.' });
       return;
     }
     const result = transferFunds(transferTarget.trim(), transferAmt);
     if (result.success) {
-      Alert.alert(
-        t('transferSuccess'),
-        isRTL ? `تم تحويل $${result.amount.toFixed(2)} إلى ${result.targetName}` : `$${result.amount.toFixed(2)} transferred to ${result.targetName}`
-      );
+      showModal({ type:'success', icon:'points', title: t('transferSuccess'), message: isRTL ? `تم تحويل $${result.amount.toFixed(2)} إلى ${result.targetName}` : `$${result.amount.toFixed(2)} transferred to ${result.targetName}.` });
       setTransferTarget('');
       setTransferAmt('');
       setActiveTab('wallet');
     } else {
-      Alert.alert(isRTL ? 'خطأ' : 'Error', result.error);
+      showModal({ type:'error', title: isRTL ? 'خطأ' : 'Error', message: result.error });
     }
   };
 
@@ -350,7 +347,7 @@ export function AccountScreen({ navigation }) {
     if (!name || !username || !email || password.length < 6) { setError(t('fillAllFields')); return; }
     if (password !== confirmPass) { setError(t('passwordsNotMatch')); return; }
     const result = register(name.trim(), username.trim(), email.trim(), password.trim());
-    if (result.success) { Alert.alert(t('accountCreated'), t('canSignIn')); reset(); setMode('login'); }
+    if (result.success) { showModal({ type:'success', emoji:'🎉', title: t('accountCreated'), message: t('canSignIn') }); reset(); setMode('login'); }
     else setError(result.error);
   };
 
@@ -404,7 +401,7 @@ export function AccountScreen({ navigation }) {
           </TouchableOpacity>
         ))}
 
-        <TouchableOpacity style={[s.logoutBtn, isRTL && s.rowRev]} onPress={() => { logout(); Alert.alert(t('loggedOut')); }}>
+        <TouchableOpacity style={[s.logoutBtn, isRTL && s.rowRev]} onPress={() => { logout(); showModal({ type:'info', title: t('loggedOut'), message: isRTL ? 'تم تسجيل الخروج بنجاح' : 'You have been signed out.' }); }}>
           <Text style={{ fontSize: 18 }}>🚪</Text>
           <Text style={[s.logoutText, isRTL && s.rtlText]}>{t('logout')}</Text>
         </TouchableOpacity>
@@ -429,7 +426,7 @@ export function AccountScreen({ navigation }) {
             const result = requestPasswordReset(resetEmail.trim());
             if (!result.success) { setError(result.error); return; }
             setDemoCode(result.code); setOtpEmail(result.email);
-            Alert.alert(isRTL ? '📧 كود التحقق (تجريبي)' : '📧 Verification Code (Demo)', isRTL ? `كودك: ${result.code}` : `Your code: ${result.code}`, [{ text: 'OK' }]);
+            showModal({ type:'info', emoji:'📧', title: isRTL ? 'كود التحقق (تجريبي)' : 'Verification Code (Demo)', message: isRTL ? `كودك: ${result.code}` : `Your code: ${result.code}` });
             setMode('otp');
           }}>
             <LinearGradient colors={[C.primary, C.primary2]} style={s.authBtn}><Text style={s.authBtnText}>{t('sendResetLink')}</Text></LinearGradient>
@@ -477,7 +474,7 @@ export function AccountScreen({ navigation }) {
           </TouchableOpacity>
           <TouchableOpacity style={{ alignItems: 'center', marginTop: 8, marginBottom: 8 }} onPress={() => {
             const result = requestPasswordReset(resetEmail.trim());
-            if (result.success) { setDemoCode(result.code); Alert.alert(isRTL ? 'كود جديد' : 'New Code', isRTL ? `كودك: ${result.code}` : `Code: ${result.code}`, [{ text: 'OK' }]); }
+            if (result.success) { setDemoCode(result.code); showModal({ type:'success', title: isRTL ? 'كود جديد' : 'New Code', message: isRTL ? `كودك: ${result.code}` : `Code: ${result.code}` }); }
           }}>
             <Text style={{ fontSize: 12, color: C.accent, fontWeight: '600' }}>{isRTL ? '🔄 إعادة إرسال' : '🔄 Resend Code'}</Text>
           </TouchableOpacity>
@@ -507,7 +504,7 @@ export function AccountScreen({ navigation }) {
             if (newPassValue !== confirmNewPassValue) { setError(t('passwordsNotMatch')); return; }
             const result = verifyOTPAndReset(enteredOtp, newPassValue);
             if (result.success) {
-              Alert.alert(isRTL ? '✅ تم التغيير' : '✅ Changed', isRTL ? 'يمكنك تسجيل الدخول الآن' : 'You can now sign in', [{ text: 'OK', onPress: () => { reset(); setMode('login'); } }]);
+              showModal({ type:'success', emoji:'✅', title: isRTL ? 'تم التغيير' : 'Password Changed', message: isRTL ? 'يمكنك تسجيل الدخول الآن' : 'You can now sign in.', buttons: [{ text: 'OK', onPress: () => { reset(); setMode('login'); } }] });
             } else { setError(result.error); setMode('otp'); }
           }}>
             <LinearGradient colors={[C.primary, C.primary2]} style={s.authBtn}><Text style={s.authBtnText}>{isRTL ? '✅ حفظ' : '✅ Save'}</Text></LinearGradient>
@@ -673,7 +670,7 @@ export function SettingsScreen() {
     if (newPw.length < 6) { setPwError(isRTL ? 'كلمة المرور 6 أحرف على الأقل' : 'Min 6 characters'); return; }
     if (newPw !== confirmPw) { setPwError(t('passwordsNotMatch')); return; }
     const result = changePassword(oldPw, newPw);
-    if (result.success) { Alert.alert(t('passwordChanged')); setOldPw(''); setNewPw(''); setConfirmPw(''); setShowChangePw(false); }
+    if (result.success) { showModal({ type:'success', title: t('passwordChanged'), message: isRTL ? 'تم تغيير كلمة المرور بنجاح' : 'Your password has been changed successfully.' }); setOldPw(''); setNewPw(''); setConfirmPw(''); setShowChangePw(false); }
     else setPwError(result.error);
   };
 
@@ -768,7 +765,7 @@ export function SettingsScreen() {
       )}
 
       {currentUser && (
-        <TouchableOpacity onPress={() => { logout(); Alert.alert(t('loggedOut')); }}>
+        <TouchableOpacity onPress={() => { logout(); showModal({ type:'info', title: t('loggedOut'), message: isRTL ? 'تم تسجيل الخروج بنجاح' : 'You have been signed out.' }); }}>
           <View style={[s.settingGroup, { marginTop: 8, backgroundColor: 'rgba(248,113,113,0.08)', borderColor: 'rgba(248,113,113,0.2)' }]}>
             <View style={[s.settingRow, { borderBottomWidth: 0 }, isRTL && s.rowRev]}>
               <Text style={s.settingIcon}>🚪</Text>
@@ -1025,18 +1022,15 @@ function TicketDetailView({ ticketId, onBack, isRTL, colors: C, t, tickets, addT
   };
 
   const handleClose = () => {
-    Alert.alert(
-      isRTL ? 'إغلاق التذكرة' : 'Close Ticket',
-      isRTL ? 'هل تريد إغلاق هذه التذكرة؟ لن تتمكن من إعادة فتحها.' : 'Close this ticket? You cannot reopen it.',
-      [
+    showModal({
+      type: 'confirm', icon: 'lock',
+      title: isRTL ? 'إغلاق التذكرة' : 'Close Ticket',
+      message: isRTL ? 'هل تريد إغلاق هذه التذكرة؟ لن تتمكن من إعادة فتحها.' : 'Close this ticket? You cannot reopen it.',
+      buttons: [
         { text: isRTL ? 'إلغاء' : 'Cancel', style: 'cancel' },
-        {
-          text: isRTL ? 'إغلاق' : 'Close',
-          style: 'destructive',
-          onPress: () => closeTicket(ticketId),
-        },
-      ]
-    );
+        { text: isRTL ? 'إغلاق' : 'Close',  style: 'destructive', onPress: () => closeTicket(ticketId) },
+      ],
+    });
   };
 
   return (
@@ -1082,7 +1076,7 @@ function TicketDetailView({ ticketId, onBack, isRTL, colors: C, t, tickets, addT
         <View style={{ alignItems: 'center', padding: 16, borderRadius: 14, backgroundColor: 'rgba(52,211,153,0.08)', borderWidth: 1, borderColor: 'rgba(52,211,153,0.25)', marginTop: 4 }}>
           <Text style={{ fontSize: 22, marginBottom: 6 }}>🔒</Text>
           <Text style={{ fontSize: 15, color: '#34d399', fontWeight: '800' }}>
-            {isRTL ? 'التذكرة مغلوقة' : 'Ticket Closed'}
+            {isRTL ? 'التذكرة مغلقة' : 'Ticket Closed'}
           </Text>
           <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 4, textAlign: 'center' }}>
             {isRTL ? 'يمكنك فتح تذكرة جديدة إذا احتجت مساعدة' : 'You can open a new ticket if you need further help'}
@@ -1121,7 +1115,7 @@ function TicketDetailView({ ticketId, onBack, isRTL, colors: C, t, tickets, addT
 }
 
 export function SupportScreen({ navigation }) {
-  const { tickets, createTicket, addTicketReply, closeTicket, TICKET_CATEGORIES, t, isRTL, colors: C, currentUser } = useApp();
+  const { tickets, showModal, createTicket, addTicketReply, closeTicket, TICKET_CATEGORIES, t, isRTL, colors: C, currentUser } = useApp();
   const [view, setView] = useState('list');           // 'list' | 'new' | 'detail'
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -1184,7 +1178,7 @@ export function SupportScreen({ navigation }) {
         if (r.success) {
           setSubject(''); setMessage('');
           setView('list');
-          Alert.alert(t('ticketCreated'));
+          showModal({ type:'success', icon:'ticket', title: isRTL ? '✓ تم إرسال تذكرتك' : '✓ Ticket Submitted', message: isRTL ? 'سيتواصل معك فريق الدعم قريباً' : 'Our support team will contact you soon.' });
         }
       }}>
         <LinearGradient colors={['#7c3aed', '#a855f7']} style={s.actionBtn}>
@@ -1325,14 +1319,14 @@ export function PaymentMethodsScreen({ navigation }) {
             </View>
             <TouchableOpacity onPress={() => {
               const cleanNum = cardNum.replace(/\s/g, '');
-              if (cleanNum.length < 16) { Alert.alert(isRTL ? 'خطأ' : 'Error', isRTL ? 'رقم البطاقة 16 رقم' : 'Card number must be 16 digits'); return; }
-              if (!luhnCheck(cleanNum)) { Alert.alert(isRTL ? 'بطاقة غير صالحة' : 'Invalid Card', isRTL ? 'رقم البطاقة غير صحيح' : 'Card number is not valid'); return; }
-              if (!holder.trim()) { Alert.alert(isRTL ? 'خطأ' : 'Error', isRTL ? 'أدخل اسم حامل البطاقة' : 'Enter card holder name'); return; }
-              if (!validateExpiry(expiry)) { Alert.alert(isRTL ? 'تاريخ غير صالح' : 'Invalid Date', isRTL ? 'تاريخ الانتهاء غير صحيح' : 'Expiry date invalid or expired'); return; }
-              if (cvv.length < 3) { Alert.alert(isRTL ? 'خطأ' : 'Error', isRTL ? 'CVV 3 أو 4 أرقام' : 'CVV must be 3-4 digits'); return; }
+              if (cleanNum.length < 16) { showModal({ type:'error', title: isRTL ? 'خطأ' : 'Error', message: isRTL ? 'رقم البطاقة يجب أن يكون 16 رقماً' : 'Card number must be 16 digits.' }); return; return; }
+              if (!luhnCheck(cleanNum)) { showModal({ type:'error', title: isRTL ? 'بطاقة غير صالحة' : 'Invalid Card', message: isRTL ? 'تحقق من رقم البطاقة وأعد المحاولة' : 'Please verify the card number and try again.' }); return; return; }
+              if (!holder.trim()) { showModal({ type:'error', title: isRTL ? 'خطأ' : 'Error', message: isRTL ? 'أدخل اسم حامل البطاقة' : 'Please enter the card holder name.' }); return; return; }
+              if (!validateExpiry(expiry)) { showModal({ type:'error', title: isRTL ? 'تاريخ غير صالح' : 'Invalid Date', message: isRTL ? 'تاريخ الانتهاء غير صحيح أو منتهي' : 'Expiry date is invalid or has expired.' }); return; return; }
+              if (cvv.length < 3) { showModal({ type:'error', title: isRTL ? 'خطأ' : 'Error', message: isRTL ? 'رمز CVV يجب أن يكون 3 أو 4 أرقام' : 'CVV must be 3 or 4 digits.' }); return; return; }
               addPaymentMethod({ type: 'card', last4: cleanNum.slice(-4), holder: holder.trim(), expiry, brand: cleanNum.startsWith('4') ? 'visa' : cleanNum.startsWith('5') ? 'mc' : 'mada' });
               setCardNum(''); setHolder(''); setExpiry(''); setCvv(''); setShowAdd(false);
-              Alert.alert(t('cardAdded'));
+              showModal({ type:'success', icon:'card', title: isRTL ? '✓ تمت إضافة البطاقة' : '✓ Card Added', message: isRTL ? 'يمكنك الآن استخدام البطاقة في الدفع' : 'You can now use this card for payments.' });
             }}>
               <LinearGradient colors={['#7c3aed','#a855f7']} style={[s.actionBtn, { marginTop: 4 }]}><Text style={s.actionBtnText}>{t('addCard')}</Text></LinearGradient>
             </TouchableOpacity>

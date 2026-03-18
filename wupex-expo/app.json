@@ -1,23 +1,29 @@
 {
   "expo": {
-    "name": "Mez-Cards",
+    "name": "MezCards",
     "slug": "mezcards",
     "version": "1.0.1",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0d0b1e",
     "owner": "heyeb19085",
     "splash": {
+      "image": "./assets/splash-icon.png",
       "backgroundColor": "#0d0b1e",
       "resizeMode": "contain"
     },
     "android": {
       "package": "com.mezcards.store",
-      "versionCode": 2,
+      "versionCode": 3,
       "backgroundColor": "#0d0b1e",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0d0b1e"
       }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {

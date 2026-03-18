@@ -47,35 +47,25 @@ export default function CartScreen({ navigation }) {
     setCouponError('');
     if (!couponInput.trim()) return;
     const result = validateCoupon(couponInput, subtotal);
-    if (result.valid) { setAppliedCoupon(result.coupon); Alert.alert(t('couponApplied'), result.description); }
+    if (result.valid) { setAppliedCoupon(result.coupon); showModal({ type:'success', icon:'points', title: t('couponApplied'), message: result.description }); }
     else setCouponError(result.error);
   };
 
   const handleCheckout = () => {
     if (!currentUser) {
-      Alert.alert(t('signInRequired'), t('signInToPurchase'), [
-        { text: t('cancel'), style: 'cancel' },
-        { text: t('signIn'), onPress: () => navigation.getParent()?.navigate('Account') },
-      ]);
+      showModal({ type:'info', title: t('signInRequired'), message: t('signInToPurchase'),
+        buttons: [{ text: t('cancel'), style:'cancel' }, { text: t('signIn'), onPress: () => navigation.getParent()?.navigate('Account') }] });
       return;
     }
     // إذا النقاط لا تكفي ولم يختر طريقة إضافية صالحة
     if (needSecondary && currentUser.wallet < total) {
-      Alert.alert(
-        t('insufficientBalance'),
-        `${t('walletBalance')}: $${currentUser.wallet.toFixed(2)}`,
-        [
-          { text: t('cancel'), style: 'cancel' },
-          { text: t('addFunds'), onPress: () => navigation.getParent()?.navigate('Wallet') },
-        ]
-      );
+      showModal({ type:'warning', title: t('insufficientBalance'), message: `${t('walletBalance')}: $${currentUser.wallet.toFixed(2)}`,
+        buttons: [{ text: t('cancel'), style:'cancel' }, { text: t('addFunds'), onPress: () => navigation.getParent()?.navigate('Wallet') }] });
       return;
     }
     if (!usingPoints && !pointsCoverAll && currentUser.wallet < total) {
-      Alert.alert(t('insufficientBalance'), `${t('walletBalance')}: $${currentUser.wallet.toFixed(2)}`, [
-        { text: t('cancel'), style: 'cancel' },
-        { text: t('addFunds'), onPress: () => navigation.getParent()?.navigate('Wallet') },
-      ]);
+      showModal({ type:'warning', title: t('insufficientBalance'), message: `${t('walletBalance')}: $${currentUser.wallet.toFixed(2)}`,
+        buttons: [{ text: t('cancel'), style:'cancel' }, { text: t('addFunds'), onPress: () => navigation.getParent()?.navigate('Wallet') }] });
       return;
     }
     const effectiveMode = needSecondary ? secondaryMode : primaryMode;

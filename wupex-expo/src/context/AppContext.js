@@ -306,6 +306,15 @@ export function AppProvider({ children }) {
   const [cart, setCart] = useState([]);
   const [language, setLanguage] = useState('ar');
   const [isDark, setIsDark] = useState(true);
+  // ─── Modal State ──────────────────────────────────────────────────────────
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalConfig, setModalConfig]   = useState(null);
+
+  const showModal = (config) => {
+    setModalConfig(config);
+    setModalVisible(true);
+  };
+  const hideModal = () => setModalVisible(false);
   const [currency, setCurrency] = useState(CURRENCIES[0]);
   const [pendingOTP, setPendingOTP] = useState(null);
 
@@ -863,6 +872,8 @@ export function AppProvider({ children }) {
       referralData, shareReferralCode, changeReferralCode,
       transferFunds,
       addToCart, removeFromCart, clearCart, checkout, addFunds,
+      // Modal
+      showModal, hideModal, modalVisible, modalConfig,
     }}>
       {children}
     </AppContext.Provider>

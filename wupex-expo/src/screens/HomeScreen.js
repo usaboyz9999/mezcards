@@ -12,14 +12,15 @@ const { width } = Dimensions.get('window');
 const CARD_W = width * 0.4;
 
 const HOME_CATEGORIES = [
-  { id: 1, name: { en: 'Gift Cards', ar: 'بطاقات هدايا' }, icon: 'gift', colors: ['#ff6b6b', '#ffd93d'], image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400&q=80', filter: 'Gift Cards' },
-  { id: 2, name: { en: 'Gaming', ar: 'ألعاب' }, icon: 'game-controller', colors: ['#1b2838', '#4a90d9'], image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&q=80', filter: 'Gaming' },
-  { id: 3, name: { en: 'Streaming', ar: 'بث مباشر' }, icon: 'play-circle', colors: ['#141414', '#e50914'], image: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=400&q=80', filter: 'Streaming' },
-  { id: 4, name: { en: 'Mobile', ar: 'جوال' }, icon: 'phone-portrait', colors: ['#c8a84b', '#4a3728'], image: 'https://images.unsplash.com/photo-1601944179066-29786cb9d32a?w=400&q=80', filter: 'Mobile' },
-  { id: 5, name: { en: 'Subscriptions', ar: 'اشتراكات' }, icon: 'star', colors: ['#003087', '#0070d1'], image: 'https://images.unsplash.com/photo-1616469829581-73993eb86b02?w=400&q=80', filter: 'Subscriptions' },
-  { id: 6, name: { en: 'VPN', ar: 'VPN وأمان' }, icon: 'shield-checkmark', colors: ['#1a1a2e', '#4687ff'], image: 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=400&q=80', filter: 'VPN' },
-  { id: 7, name: { en: 'Education', ar: 'تعليم' }, icon: 'school', colors: ['#a435f0', '#6d28d9'], image: 'https://images.unsplash.com/photo-1501504905252-473c47e087f8?w=400&q=80', filter: 'Education' },
-  { id: 8, name: { en: 'Software', ar: 'برمجيات' }, icon: 'code-slash', colors: ['#cc0000', '#330000'], image: 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=400&q=80', filter: 'Software' },
+  { id: 1, name: { en: 'Gift Cards',   ar: 'بطاقات هدايا'  }, icon: 'gift',             colors: ['#232f3e', '#ff9900'], image: 'https://read.cardtonic.com/wp-content/uploads/2023/04/All-You-Need-To-Know-About-Amazon-Gift-Card.jpg', filter: 'Gift Cards' },
+  { id: 2, name: { en: 'Gaming',       ar: 'ألعاب'          }, icon: 'game-controller',  colors: ['#1b2838', '#66c0f4'], image: 'https://dropinblog.net/34253310/files/featured/imagem-2024-09-23-133404744.png', filter: 'Gaming' },
+  { id: 3, name: { en: 'Streaming',    ar: 'بث مباشر'       }, icon: 'play-circle',      colors: ['#141414', '#e50914'], image: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=400&q=80', filter: 'Streaming' },
+  { id: 4, name: { en: 'Mobile',       ar: 'جوال'           }, icon: 'phone-portrait',   colors: ['#6a0dad', '#9b59b6'], image: 'https://blog.rasseed.com/wp-content/uploads/2022/06/logo-1.webp', filter: 'Mobile' },
+  { id: 5, name: { en: 'Subscriptions',ar: 'اشتراكات'      }, icon: 'star',             colors: ['#003087', '#0070d1'], image: 'https://static.rapido.com/cms/sites/23/2022/06/14075848/Gift-cards-Dual-Branded.jpg', filter: 'Subscriptions' },
+  { id: 6, name: { en: 'VPN',          ar: 'VPN وأمان'      }, icon: 'shield-checkmark', colors: ['#1d3670', '#4687ff'], image: 'https://images.bfmtv.com/Q4YX8gvxuF8VifRWflGPBgr0Fyo=/0x0:1260x840/1260x0/biz_dev/1666089294586_nordvpn_offre_reseau_mesh_jpg.jpg', filter: 'VPN' },
+  { id: 7, name: { en: 'Education',    ar: 'تعليم'          }, icon: 'school',           colors: ['#a435f0', '#6d28d9'], image: 'https://copartpro.com/wp-content/uploads/2022/10/Tai-khoan-Udemy-Personal-Plan.webp', filter: 'Education' },
+  { id: 8, name: { en: 'Software',     ar: 'برمجيات'        }, icon: 'code-slash',       colors: ['#ff0000', '#8b0000'], image: 'https://gravitymedia.b-cdn.net/wp-content/uploads/2022/04/Adobe-Creative-Cloud.png', filter: 'Software' },
+  { id: 9, name: { en: 'Chat Apps',    ar: 'تطبيقات دردشة'  }, icon: 'chatbubbles',     colors: ['#25d366', '#128c7e'], image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/800px-WhatsApp.svg.png', filter: 'Chat Apps' },
 ];
 
 const PROMO_BANNERS = [
@@ -186,7 +187,7 @@ function PromoBanners({ navigation }) {
               style={{ width: CARD_WIDTH, marginRight: GAP }}
               onPress={() => {
                 if (wasDragged.current) return;
-                navigation.navigate('Products', { filterCategory: item.filter });
+                navigation.navigate('Products', { screen: 'Products', params: { filterCategory: item.filter } });
               }}
               activeOpacity={0.92}
             >
@@ -350,9 +351,7 @@ function CategorySection({ category, navigation }) {
         </View>
         <TouchableOpacity
           style={[s.seeAllBtn, { borderColor: C.accent + '44' }]}
-          onPress={() => navigation.navigate('Products', {
-            filterCategory: category.filter === 'All' ? undefined : category.filter,
-          })}
+          onPress={() => navigation.navigate('Products', { screen: 'Products', params: { filterCategory: category.filter === 'All' ? undefined : category.filter } })}
         >
           <Text style={[s.seeAllTxt, { color: C.accent }]}>{t('seeAll')}</Text>
           <Ionicons
@@ -399,7 +398,7 @@ function FeaturedSection({ navigation }) {
         </View>
         <TouchableOpacity
           style={[s.seeAllBtn, { borderColor: C.accent + '44' }]}
-          onPress={() => navigation.navigate('Products')}
+          onPress={() => navigation.navigate('Products', { screen: 'Products', params: {} })}
         >
           <Text style={[s.seeAllTxt, { color: C.accent }]}>{t('seeAll')}</Text>
           <Ionicons name={isRTL ? 'chevron-back' : 'chevron-forward'} size={12} color={C.accent} />
@@ -436,7 +435,7 @@ const APP_REVIEWS = [
 ];
 
 function ReviewsSection() {
-  const { isRTL, colors: C, language, currentUser, addReview, getProductReviews } = useApp();
+  const { isRTL, colors: C, language, currentUser, showModal, addReview, getProductReviews } = useApp();
   const lang = language === 'ar' ? 'ar' : 'en';
   const [newRating, setNewRating] = useState(5);
   const [newText, setNewText] = useState('');
@@ -478,8 +477,8 @@ function ReviewsSection() {
   );
 
   const handleSubmit = () => {
-    if (!currentUser) { Alert.alert(isRTL ? 'يجب تسجيل الدخول' : 'Sign in required', isRTL ? 'سجّل الدخول لكتابة مراجعة' : 'Please sign in to write a review'); return; }
-    if (!newText.trim()) { Alert.alert(isRTL ? 'خطأ' : 'Error', isRTL ? 'اكتب تعليقك أولاً' : 'Please write your review'); return; }
+    if (!currentUser) { showModal({ type:'info', title: isRTL ? 'يجب تسجيل الدخول' : 'Sign in required', message: isRTL ? 'سجّل الدخول لكتابة مراجعة' : 'Please sign in to write a review' }); return; }
+    if (!newText.trim()) { showModal({ type:'error', title: isRTL ? 'خطأ' : 'Error', message: isRTL ? 'اكتب تعليقك أولاً' : 'Please write your review first.' }); return; }
     if (addReview) addReview(0, newRating, newText.trim());
     setNewText('');
     setNewRating(5);
@@ -567,7 +566,7 @@ function ReviewsSection() {
               <TouchableOpacity onPress={handleSubmit} style={{ marginTop: 10 }}>
                 <LinearGradient colors={['#7c3aed','#a855f7']} style={{ borderRadius: 12, padding: 13, alignItems: 'center' }}>
                   <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }}>
-                    {isRTL ? '📝 إرسال رأيك' : '📝 Submit Review'}
+                    {isRTL ? '📝 إرسال المراجعة' : '📝 Submit Review'}
                   </Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -599,7 +598,7 @@ export default function HomeScreen({ navigation }) {
           </View>
           <TouchableOpacity
             style={[s.seeAllBtn, { borderColor: C.accent + '44' }]}
-            onPress={() => navigation.navigate('Products')}
+            onPress={() => navigation.navigate('Products', { screen: 'Products', params: {} })}
           >
             <Text style={[s.seeAllTxt, { color: C.accent }]}>{t('seeAll')}</Text>
             <Ionicons name={isRTL ? 'chevron-back' : 'chevron-forward'} size={12} color={C.accent} />
@@ -612,9 +611,7 @@ export default function HomeScreen({ navigation }) {
             <CategoryGridCard
               key={cat.id}
               category={cat}
-              onPress={() => navigation.navigate('Products', {
-                filterCategory: cat.filter === 'All' ? undefined : cat.filter,
-              })}
+              onPress={() => navigation.navigate('Products', { screen: 'Products', params: { filterCategory: cat.filter === 'All' ? undefined : cat.filter } })}
             />
           ))}
         </View>

@@ -8,6 +8,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { AppProvider, useApp } from './src/context/AppContext';
+import AppModal from './src/components/AppModal';
 import SplashScreen        from './src/screens/SplashScreen';
 import HomeScreen          from './src/screens/HomeScreen';
 import ProductsScreen      from './src/screens/ProductsScreen';
@@ -394,8 +395,23 @@ export default function App() {
     <SafeAreaProvider>
       <AppProvider>
         <AppContent />
+        <AppModalRoot />
       </AppProvider>
     </SafeAreaProvider>
+  );
+}
+
+// مكوّن يقرأ modal state ويعرضه
+function AppModalRoot() {
+  const { modalVisible, modalConfig, hideModal, colors: C, isRTL } = useApp();
+  return (
+    <AppModal
+      visible={modalVisible}
+      config={modalConfig}
+      onClose={hideModal}
+      colors={C}
+      isRTL={isRTL}
+    />
   );
 }
 

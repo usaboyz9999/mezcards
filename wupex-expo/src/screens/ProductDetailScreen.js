@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext'
@@ -22,7 +22,7 @@ function StarRating({ rating, size = 16, interactive = false, onSelect }) {
 
 export default function ProductDetailScreen({ route, navigation }) {
   const { product } = route.params;
-  const { addToCart, checkout, cart, clearCart, t, isRTL, currentUser, colors: C, toggleWishlist, isInWishlist, getProductReviews, getProductRating, addReview, markHelpful } = useApp();
+  const { addToCart, checkout, showModal, cart, clearCart, t, isRTL, currentUser, colors: C, toggleWishlist, isInWishlist, getProductReviews, getProductRating, addReview, markHelpful } = useApp();
 
   const [selectedPkg, setSelectedPkg] = useState(0);
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -36,25 +36,19 @@ export default function ProductDetailScreen({ route, navigation }) {
 
   const handleAdd = () => {
     if (!currentUser) {
-      Alert.alert(t('signInRequired'), t('signInToPurchase'), [
-        { text: t('cancel'), style: 'cancel' },
-        { text: t('signIn'), onPress: () => navigation.navigate('Account') },
-      ]);
+      showModal({ type:'info', title: t('signInRequired'), message: t('signInToPurchase'),
+        buttons: [{ text: t('cancel'), style:'cancel' }, { text: t('signIn'), onPress: () => navigation.navigate('Account') }] });
       return;
     }
     addToCart(product, selectedPkg);
-    Alert.alert(t('addedToCart'), `${product.name} — ${product.pkgs[selectedPkg].a}`, [
-      { text: t('continueShopping'), style: 'cancel' },
-      { text: t('viewCart'), onPress: () => navigation.navigate('Cart') },
-    ]);
+    showModal({ type:'success', icon:'cart', title: t('addedToCart'), message: `${product.name} — ${product.pkgs[selectedPkg].a}`,
+      buttons: [{ text: t('continueShopping'), style:'cancel' }, { text: t('viewCart'), onPress: () => navigation.navigate('Cart') }] });
   };
 
   const handleBuyNow = () => {
     if (!currentUser) {
-      Alert.alert(t('signInRequired'), t('signInToPurchase'), [
-        { text: t('cancel'), style: 'cancel' },
-        { text: t('signIn'), onPress: () => navigation.navigate('Account') },
-      ]);
+      showModal({ type:'info', title: t('signInRequired'), message: t('signInToPurchase'),
+        buttons: [{ text: t('cancel'), style:'cancel' }, { text: t('signIn'), onPress: () => navigation.navigate('Account') }] });
       return;
     }
     addToCart(product, selectedPkg);
@@ -63,26 +57,26 @@ export default function ProductDetailScreen({ route, navigation }) {
 
   const handleWishlist = () => {
     if (!currentUser) {
-      Alert.alert(t('signInRequired'), t('signInToPurchase'));
+      showModal({ type:'info', title: t('signInRequired'), message: t('signInToPurchase') });
       return;
     }
     const added = toggleWishlist(product.id);
-    Alert.alert(added ? t('addedToWishlist') : t('removedFromWishlist'), '', [{ text: 'OK' }]);
+    showModal({ type: added ? 'success' : 'info', emoji: added ? '❤️' : '💔', title: added ? t('addedToWishlist') : t('removedFromWishlist') });
   };
 
   const handleSubmitReview = () => {
-    if (!currentUser) { Alert.alert(t('signInRequired'), t('signInToReview')); return; }
+    if (!currentUser) { showModal({ type:'info', title: t('signInRequired'), message: t('signInToReview') }); return; }
     if (!reviewText.trim()) return;
     setSubmitting(true);
     const result = addReview(product.id, reviewRating, reviewText.trim());
     setSubmitting(false);
     if (result.success) {
-      Alert.alert(t('reviewAdded'));
+      showModal({ type:'success', emoji:'⭐', title: t('reviewAdded'), message: isRTL ? 'شكراً لمراجعتك!' : 'Thank you for your review!' });
       setShowReviewForm(false);
       setReviewText('');
       setReviewRating(5);
     } else {
-      Alert.alert('', result.error);
+      showModal({ type:'error', title: isRTL ? 'خطأ' : 'Error', message: result.error });
     }
   };
 
@@ -91,7 +85,22 @@ export default function ProductDetailScreen({ route, navigation }) {
       {/* Hero Image */}
       <View style={styles.heroWrap}>
         <LinearGradient colors={product.colors || ['#4c1d95', '#7c3aed']} style={styles.heroImg}>
-          <Text style={styles.heroText}>{product.short}</Text>
+          {product.image ? (
+            <>
+              <Image
+                source={{ uri: product.image }}
+                style={styles.heroImageFull}
+                resizeMode="stretch"
+              />
+              {/* overlay خفيف لتحسين قراءة النص */}
+              <LinearGradient
+                colors={['rgba(0,0,0,0.15)', 'rgba(0,0,0,0.45)']}
+                style={StyleSheet.absoluteFill}
+              />
+            </>
+          ) : (
+            <Text style={styles.heroText}>{product.short}</Text>
+          )}
         </LinearGradient>
 
         {/* Wishlist Button */}
@@ -290,8 +299,9 @@ export default function ProductDetailScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  heroWrap: { position: 'relative', margin: 14 },
-  heroImg: { height: 200, alignItems: 'center', justifyContent: 'center', borderRadius: 20, overflow: 'hidden' },
+  heroWrap: { position: 'relative', marginHorizontal: 14, marginTop: 14, marginBottom: 8 },
+  heroImg: { height: 220, alignItems: 'center', justifyContent: 'center', borderRadius: 20, overflow: 'hidden' },
+  heroImageFull: { width: '100%', height: '100%' },
   heroText: { fontSize: 32, fontWeight: '900', color: '#fff', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8 },
   wishlistBtn: { position: 'absolute', top: 12, right: 12, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1, elevation: 3 },
   heroBadge: { position: 'absolute', top: 12, left: 12, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },

@@ -24,7 +24,7 @@ const CATEGORY_ICONS = {
 const CATS_AR = {
   'All': 'الكل', 'Gift Cards': 'هدايا', 'Gaming': 'ألعاب',
   'Streaming': 'بث', 'Mobile': 'جوال', 'Subscriptions': 'اشتراكات',
-  'VPN': 'VPN', 'Education': 'تعليم', 'Software': 'برمجيات',
+  'VPN': 'VPN', 'Education': 'تعليم', 'Software': 'برمجيات', 'Chat Apps': 'دردشة',
 };
 
 const SORT_OPTIONS = [
@@ -238,6 +238,7 @@ export default function ProductsScreen({ navigation, route }) {
           contentContainerStyle={{ paddingHorizontal: PADDING, paddingTop: 2, paddingBottom: 24 }}
           columnWrapperStyle={NUM_COLS > 1 ? { flexDirection: 'row', alignItems: 'flex-start' } : undefined}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={false}
         />
       )}
     </View>
